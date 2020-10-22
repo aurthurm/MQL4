@@ -7,6 +7,9 @@
 #property link      "https://www.mql5.com"
 #property version   "1.00"
 #property strict
+#include <ChanInclude/MQL4Function.mqh>
+
+
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
@@ -15,12 +18,14 @@ extern int MagicNo = 1445029;
 extern double Lots = 1.0;
 extern double take_profit = 30;
 extern double stop_loss = 100;
+ModuleMQL4 *module;
 
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
 int OnInit()
   {
+   module = new ModuleMQL4();
    return(INIT_SUCCEEDED);
   }
 
@@ -29,8 +34,12 @@ int OnInit()
 //+------------------------------------------------------------------+
 void OnTick()
   {
-   double price;
-   AddPostion(price);
+   module.tradingOnOff();
+   if(OrderSelect(0,SELECT_BY_POS,MODE_TRADES)){
+      Print(OrderClosePrice());
+   }
+  // double price;
+   //AddPostion(price);
    
 //   double ma_200_value = iMA(NULL,0,200,0,MODE_SMA,PRICE_CLOSE,1);
 //   Print("200 MA Value : ",ma_200_value);
@@ -49,6 +58,11 @@ void OnTick()
 //      Print("OrderSend placed successfully");
 
   }
+  
+  void TestFunction(int &aaa){
+   Print(aaa);
+   aaa = 3;
+  }
 
 //+------------------------------------------------------------------+
 //| Expert deinitialization function                                 |
@@ -56,7 +70,10 @@ void OnTick()
 void OnDeinit(const int reason)
   {
 //---
-
+   if(module != NULL){
+       delete module;
+       module = NULL;
+   }
   }
 //+------------------------------------------------------------------+
 
