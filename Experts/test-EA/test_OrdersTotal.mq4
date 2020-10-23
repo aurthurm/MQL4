@@ -34,28 +34,7 @@ int OnInit()
 //+------------------------------------------------------------------+
 void OnTick()
   {
-   module.tradingOnOff();
-   if(OrderSelect(0,SELECT_BY_POS,MODE_TRADES)){
-      Print(OrderClosePrice());
-   }
-  // double price;
-   //AddPostion(price);
-   
-//   double ma_200_value = iMA(NULL,0,200,0,MODE_SMA,PRICE_CLOSE,1);
-//   Print("200 MA Value : ",ma_200_value);
-//   Print("current buy price :",Bid);
-//   Print("current Sell price :",Ask);
-//   Print("current before bar higt : ",High[1]);
-//   Print("Point value : ",Point);
-//   Print("Close Price : ",Close[1]);
-
-//   int ticket = OrderSend(Symbol(), OP_BUY, 1.0,Ask,10, Ask-(stop_loss*Point),Ask+(take_profit*Point),"MA",MagicNo,0,Blue);
-//   if(ticket<0)
-//     {
-//      Print("OrderSend failed with error #",GetLastError());
-//     }
-//   else
-//      Print("OrderSend placed successfully");
+   //Print(9/3);
 
   }
   
