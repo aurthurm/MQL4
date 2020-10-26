@@ -8,11 +8,11 @@
 #property version   "1.00"
 #property strict
 //------- external parameters ---------------------------------------+
-extern string             nameInd1           = "___________RSI__________"; // RSi 
+extern string             nameInd1           = "___________RSI__________"; // RSi
 extern int                RSI_period         = 3;                          // RSi period
 extern ENUM_APPLIED_PRICE RSI_applied_price  = PRICE_CLOSE;                // RSi applied price
-extern int                RSI_up_level       = 80;                         // level up - RSi 
-extern int                RSI_dn_level       = 20;                         // level down - RSi 
+extern int                RSI_up_level       = 80;                         // level up - RSi
+extern int                RSI_dn_level       = 20;                         // level down - RSi
 extern string             nameInd2           = "________Stochastic______"; // Stochastic
 extern int                STh_K_period       = 6;                          // K period
 extern int                STh_D_period       = 3;                          // D period
@@ -44,19 +44,53 @@ string   txt="";
 int OnInit()
   {
    Symb=Symbol();
-   if(STh_price_field!=1) STh_price_field=0;
-   if(RSI_up_level>=100 || RSI_up_level<=RSI_dn_level) { Print("Wrong level up - RSi !");             return(INIT_FAILED);}
-   if(RSI_dn_level<=0   || RSI_dn_level>=RSI_up_level) { Print("Wrong level down - RSi !");           return(INIT_FAILED);}
-   if(STh_up_level>=100 || STh_up_level<=STh_dn_level) { Print("Wrong level up - Stochastic !");      return(INIT_FAILED);}
-   if(STh_dn_level<=0   || STh_dn_level>=STh_up_level) { Print("Wrong level down - Stochastic !");    return(INIT_FAILED);}
-   if(Lot<MarketInfo(Symb,MODE_MINLOT) || Lot>MarketInfo(Symb,MODE_MAXLOT)) { Print("Wrong LOT!");  return(INIT_FAILED);}
-   if(AllowLoss<0) AllowLoss=0;
-   if(AllowLoss!=0 && AllowLoss<MarketInfo(Symb,MODE_STOPLEVEL)) { Print("Wrong allow Loss!");       return(INIT_FAILED);}
-   if(TrailingStop<0) TrailingStop=0;
-   if(TrailingStop!=0 && TrailingStop<MarketInfo(Symb,MODE_STOPLEVEL)) { Print("Wrong Trailing Stop!"); return(INIT_FAILED);}
-   if(Slippage<0) Slippage=0;
-   if(NumberOfTry<1)  NumberOfTry=1;
-   if(MagicNumber<0)  MagicNumber=MathAbs(MagicNumber);
+   if(STh_price_field!=1)
+      STh_price_field=0;
+   if(RSI_up_level>=100 || RSI_up_level<=RSI_dn_level)
+     {
+      Print("Wrong level up - RSi !");
+      return(INIT_FAILED);
+     }
+   if(RSI_dn_level<=0   || RSI_dn_level>=RSI_up_level)
+     {
+      Print("Wrong level down - RSi !");
+      return(INIT_FAILED);
+     }
+   if(STh_up_level>=100 || STh_up_level<=STh_dn_level)
+     {
+      Print("Wrong level up - Stochastic !");
+      return(INIT_FAILED);
+     }
+   if(STh_dn_level<=0   || STh_dn_level>=STh_up_level)
+     {
+      Print("Wrong level down - Stochastic !");
+      return(INIT_FAILED);
+     }
+   if(Lot<MarketInfo(Symb,MODE_MINLOT) || Lot>MarketInfo(Symb,MODE_MAXLOT))
+     {
+      Print("Wrong LOT!");
+      return(INIT_FAILED);
+     }
+   if(AllowLoss<0)
+      AllowLoss=0;
+   if(AllowLoss!=0 && AllowLoss<MarketInfo(Symb,MODE_STOPLEVEL))
+     {
+      Print("Wrong allow Loss!");
+      return(INIT_FAILED);
+     }
+   if(TrailingStop<0)
+      TrailingStop=0;
+   if(TrailingStop!=0 && TrailingStop<MarketInfo(Symb,MODE_STOPLEVEL))
+     {
+      Print("Wrong Trailing Stop!");
+      return(INIT_FAILED);
+     }
+   if(Slippage<0)
+      Slippage=0;
+   if(NumberOfTry<1)
+      NumberOfTry=1;
+   if(MagicNumber<0)
+      MagicNumber=MathAbs(MagicNumber);
    Comment("Waiting a new tick!");
    return(INIT_SUCCEEDED);
   }
@@ -72,17 +106,24 @@ void OnTick()
    if(!IsTradeAllowed())
      {
       string _txt_new="You must allow trading!";
-      if(txt!=_txt_new) { txt=_txt_new; Print(txt); Comment(txt);}
+      if(txt!=_txt_new)
+        {
+         txt=_txt_new;
+         Print(txt);
+         Comment(txt);
+        }
       return;
      }
 //---
-   double _ma      = iMA        (Symb, 0, MA_period, MA_shift, MA_method, MA_applied_price, 0);
-   double _rsi     = iRSI       (Symb, 0, RSI_period, RSI_applied_price, 0);
+   double _ma      = iMA(Symb, 0, MA_period, MA_shift, MA_method, MA_applied_price, 0);
+   double _rsi     = iRSI(Symb, 0, RSI_period, RSI_applied_price, 0);
    double _STh_0_0 = iStochastic(Symb, 0, STh_K_period, STh_D_period, STh_slowing, STh_method, STh_price_field, 0, 0);
    double _STh_1_0 = iStochastic(Symb, 0, STh_K_period, STh_D_period, STh_slowing, STh_method, STh_price_field, 1, 0);
 //---
 //--- comment
-   string _dn_up="DOWN price"; if(Bid>_ma) _dn_up="UP price";
+   string _dn_up="DOWN price";
+   if(Bid>_ma)
+      _dn_up="UP price";
    txt="\n"+NameEA+"\nMA = "+double_to_str(_ma,Digits)+" ---> "+_dn_up
        +"\nRSI ("+(string)RSI_dn_level+"/"+(string)RSI_up_level+") = "+double_to_str(_rsi)
        +"\nStochastic ("+(string)STh_dn_level+"/"+(string)STh_up_level+") = "+double_to_str(_STh_0_0)+" _ "+double_to_str(_STh_1_0);
@@ -96,10 +137,17 @@ void OnTick()
      {
       if(AllowLoss==0)
         {
-         if(_STh_0_0>STh_up_level) { CloseOpenPos(0); return;} // negative result - close
-           } else {
+         if(_STh_0_0>STh_up_level)
+           {
+            CloseOpenPos(0);   // negative result - close
+            return;
+           }
+        }
+      else
+        {
          if(_openPriceBuy-Bid>=AllowLoss*Point && _STh_0_0>STh_dn_level)
-           { // close by allow loss
+           {
+            // close by allow loss
             CloseOpenPos(0);
             return;
            }
@@ -110,10 +158,17 @@ void OnTick()
      {
       if(AllowLoss==0)
         {
-         if(_STh_0_0<STh_dn_level) { CloseOpenPos(1); return;} // negative result - close
-           } else {
+         if(_STh_0_0<STh_dn_level)
+           {
+            CloseOpenPos(1);   // negative result - close
+            return;
+           }
+        }
+      else
+        {
          if(Ask-_openPriceSell>=AllowLoss*Point && _STh_0_0<STh_up_level)
-           { // close by allow loss
+           {
+            // close by allow loss
             CloseOpenPos(1);
             return;
            }
@@ -134,7 +189,8 @@ void OnTick()
             candleTime=Time[0];
            }
         }
-      else CloseOpenPos(0); // close     
+      else
+         CloseOpenPos(0); // close
      }
 //--- close or trail SELL
    if(_openPriceSell!=0 && _STh_0_0<STh_dn_level && _openPriceSell>=Ask)
@@ -150,7 +206,8 @@ void OnTick()
             candleTime=Time[0];
            }
         }
-      else CloseOpenPos(1); // close      
+      else
+         CloseOpenPos(1); // close
      }
 //---
 //--- BUY
@@ -173,7 +230,8 @@ void OnTick()
 bool HaveOpenPos(int or_tp=-1)
   {
    int i,ot,k=OrdersTotal();
-   if(or_tp<0 || or_tp>1) or_tp=-1;
+   if(or_tp<0 || or_tp>1)
+      or_tp=-1;
    for(i=k-1; i>=0; i--)
      {
       if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES))
@@ -183,9 +241,13 @@ bool HaveOpenPos(int or_tp=-1)
             ot=OrderType();
             if(or_tp==-1)
               {
-               if(ot==0 || ot==1) return (true);
-                 } else {
-               if(or_tp==ot) return (true);
+               if(ot==0 || ot==1)
+                  return (true);
+              }
+            else
+              {
+               if(or_tp==ot)
+                  return (true);
               }
            }
         }
@@ -198,8 +260,9 @@ bool HaveOpenPos(int or_tp=-1)
 double OpenPrice(int or_tp)
   {
    double _opPr=0;
-   if(or_tp!=0 && or_tp!=1) return (_opPr);
-   int i, k = OrdersTotal ();
+   if(or_tp!=0 && or_tp!=1)
+      return (_opPr);
+   int i, k = OrdersTotal();
 //---
    for(i=k-1; i>=0; i--)
      {
@@ -209,9 +272,15 @@ double OpenPrice(int or_tp)
            {
             if(or_tp==OrderType())
               {
-               if(_opPr==0) {_opPr=OrderOpenPrice(); continue;}
-               if(or_tp==0 && _opPr<OrderOpenPrice()) _opPr=OrderOpenPrice();
-               if(or_tp==1 && _opPr>OrderOpenPrice()) _opPr=OrderOpenPrice();
+               if(_opPr==0)
+                 {
+                  _opPr=OrderOpenPrice();
+                  continue;
+                 }
+               if(or_tp==0 && _opPr<OrderOpenPrice())
+                  _opPr=OrderOpenPrice();
+               if(or_tp==1 && _opPr>OrderOpenPrice())
+                  _opPr=OrderOpenPrice();
               }
            }
         }
@@ -223,7 +292,8 @@ double OpenPrice(int or_tp)
 //+------------------------------------------------------------------+
 void Modify_SL_trail(int or_tp,int _sl)
   {
-   if(or_tp!=0 && or_tp!=1) return;
+   if(or_tp!=0 && or_tp!=1)
+      return;
    int i,err,k=OrdersTotal();
    double sl=0;
    for(i=k-1; i>=0; i--)
@@ -250,12 +320,22 @@ void Modify_SL_trail(int or_tp,int _sl)
                      ResetLastError();
                      if(!OrderModify(OrderTicket(),OrderOpenPrice(),sl,OrderTakeProfit(),0))
                        {
-                        if(it>=NumberOfTry) { Print("Cannot change the order ",OrderTicket(),"!"); break; }
+                        if(it>=NumberOfTry)
+                          {
+                           Print("Cannot change the order ",OrderTicket(),"!");
+                           break;
+                          }
                         err=GetLastError();
-                        if(err==4 || err==6 || err==8 || err==128 || err==137 || err==141 || err==146) Sleep(1000*100);
-                        else { Print("Cannot change the order ",OrderTicket(),"!"); break; }
+                        if(err==4 || err==6 || err==8 || err==128 || err==137 || err==141 || err==146)
+                           Sleep(1000*100);
+                        else
+                          {
+                           Print("Cannot change the order ",OrderTicket(),"!");
+                           break;
+                          }
                        }
-                     else break;
+                     else
+                        break;
                     }
                  }
               }
@@ -282,16 +362,28 @@ void CloseOpenPos(int or_tp)
                  {
                   ResetLastError();
                   RefreshRates();
-                  double _price=Ask; if(or_tp==0) _price=Bid;
+                  double _price=Ask;
+                  if(or_tp==0)
+                     _price=Bid;
                   //---
                   if(!OrderClose(OrderTicket(),OrderLots(),_price,Slippage))
                     {
-                     if(it>=NumberOfTry) { Print("Failed to close the order ",OrderTicket(),"!"); break; }
+                     if(it>=NumberOfTry)
+                       {
+                        Print("Failed to close the order ",OrderTicket(),"!");
+                        break;
+                       }
                      err=GetLastError();
-                     if(err==4 || err==6 || err==8 || err==128 || err==137 || err==141 || err==146) Sleep(1000*100);
-                     else { Print("Failed to close the order ",OrderTicket(),"!"); break; }
+                     if(err==4 || err==6 || err==8 || err==128 || err==137 || err==141 || err==146)
+                        Sleep(1000*100);
+                     else
+                       {
+                        Print("Failed to close the order ",OrderTicket(),"!");
+                        break;
+                       }
                     }
-                  else break;
+                  else
+                     break;
 
                  }
               }
@@ -313,12 +405,22 @@ void BuyPos(double _lot)
       RefreshRates();
       if(!OrderSend(Symb,OP_BUY,_lot,NormalizeDouble(Ask,Digits),Slippage,NormalizeDouble(sl,Digits),NormalizeDouble(tp,Digits),NULL,MagicNumber))
         {
-         if(it>=NumberOfTry) { Print("Failed OP_BUY !"); break; }
+         if(it>=NumberOfTry)
+           {
+            Print("Failed OP_BUY !");
+            break;
+           }
          err=GetLastError();
-         if(err==4 || err==6 || err==8 || err==128 || err==137 || err==141 || err==146) Sleep(1000*100);
-         else { Print("Failed OP_BUY !"); break; }
+         if(err==4 || err==6 || err==8 || err==128 || err==137 || err==141 || err==146)
+            Sleep(1000*100);
+         else
+           {
+            Print("Failed OP_BUY !");
+            break;
+           }
         }
-      else break;
+      else
+         break;
      }
   }
 //+------------------------------------------------------------------+
@@ -335,12 +437,22 @@ void SellPos(double _lot)
       RefreshRates();
       if(!OrderSend(Symb,OP_SELL,_lot,NormalizeDouble(Bid,Digits),Slippage,NormalizeDouble(sl,Digits),NormalizeDouble(tp,Digits),NULL,MagicNumber))
         {
-         if(it>=NumberOfTry) { Print("Failed OP_SELL !"); break; }
+         if(it>=NumberOfTry)
+           {
+            Print("Failed OP_SELL !");
+            break;
+           }
          err=GetLastError();
-         if(err==4 || err==6 || err==8 || err==128 || err==137 || err==141 || err==146) Sleep(1000*100);
-         else { Print("Failed OP_SELL !"); break; }
+         if(err==4 || err==6 || err==8 || err==128 || err==137 || err==141 || err==146)
+            Sleep(1000*100);
+         else
+           {
+            Print("Failed OP_SELL !");
+            break;
+           }
         }
-      else break;
+      else
+         break;
      }
   }
 //+------------------------------------------------------------------+
@@ -350,7 +462,8 @@ string double_to_str(double num,int _dig=2)
   {
    string _num  = (string)num;
    int    _pp   = StringFind(_num, ".", 0);
-   if(_pp!=-1) _num=StringSubstr(_num,0,_pp+_dig+1);
+   if(_pp!=-1)
+      _num=StringSubstr(_num,0,_pp+_dig+1);
    return(_num);
   }
 //+------------------------------------------------------------------+

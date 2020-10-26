@@ -35,6 +35,9 @@ int OnInit()
 void OnTick()
   {
    //Print(9/3);
+   double value = iBands(NULL,0,14,2,0,PRICE_CLOSE,1,1);
+   Print(NormalizeDouble(value,5));
+   Print(Digits);
 
   }
   
