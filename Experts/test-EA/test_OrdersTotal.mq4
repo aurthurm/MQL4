@@ -34,14 +34,17 @@ int OnInit()
 //+------------------------------------------------------------------+
 void OnTick()
   {
-   //Print(9/3);
-   double value = iBands(NULL,0,14,2,0,PRICE_CLOSE,1,1);
-   Print(NormalizeDouble(value,5));
-   Print(Digits);
+   double BB_value = Close[1] - iBands(NULL,0,14,2,0,PRICE_CLOSE,MODE_LOWER,1);
+   BB_value = NormalizeDouble(BB_value,Digits);
+   Print(BB_value," , ",Point*100);
 
   }
-  
-  void TestFunction(int &aaa){
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void TestFunction(int &aaa)
+  {
    Print(aaa);
    aaa = 3;
   }
@@ -52,10 +55,11 @@ void OnTick()
 void OnDeinit(const int reason)
   {
 //---
-   if(module != NULL){
-       delete module;
-       module = NULL;
-   }
+   if(module != NULL)
+     {
+      delete module;
+      module = NULL;
+     }
   }
 //+------------------------------------------------------------------+
 
@@ -72,7 +76,8 @@ void AddPostion(double &profit)
          profit += OrderOpenPrice();
         }
      }
-     double unit_price = NormalizeDouble(profit/total,5);
-     Print("profit = ",total*Lots*100000*(Bid-unit_price)); 
-     
+   double unit_price = NormalizeDouble(profit/total,5);
+   Print("profit = ",total*Lots*100000*(Bid-unit_price));
+
   }
+//+------------------------------------------------------------------+

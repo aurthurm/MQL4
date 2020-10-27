@@ -12,26 +12,29 @@
 #include <Arrays/ArrayDouble.mqh>
 //------- external parameters ---------------------------------------+
 extern string             nameInd1           = "___________BB__________";  // BB
-extern int                BB_period          = 3;                          // BB period
+extern int                BB_period          = 14;                          // BB period
 extern ENUM_APPLIED_PRICE BB_applied_price   = PRICE_CLOSE;                // BB applied price
 extern double BB_deviation                   = 2.0;                        // BB deviation
 extern string             nameInd2           = "___________CCI_________";  // CCI
 extern int                CCI_period         = 20;                         // CCI period
-extern int                CCI_up_level        = 200;                       // level up - CCI
-extern int                CCI_dn_level        = -200;                      // level down - CCI
+extern int                CCI_up_level        = 100;                       // level up - CCI
+extern int                CCI_dn_level        = -100;                      // level down - CCI
 extern ENUM_APPLIED_PRICE CCI_applied_price  = PRICE_CLOSE;                // CCI applied price
 extern string             EA_properties      = "_________Expert_________"; // Expert properties
-extern double             Lot                = 0.1;                        // Lot
+extern double             Lot                = 0.01;                        // Lot
 extern int                AllowLoss          = 300;                        // allow Loss, 0 - close by Stocho
 extern int                TrailingStop       = 300;                        // Trailing Stop, 0 - close by Stocho
 extern int                Slippage           = 10;                         // Slippage
 extern int                NumberOfTry        = 5;                          // number of trade attempts
 extern int                MagicNumber        = 5577555;                    // Magic Number
-extern int                TradingPosition    = 100;
+extern int                TradingPosition    = 100;                        // ClosePrice - BandsUpper
+extern int                CCIGradient        = 300;                        // CCI Gradient
+
 
 //global variable
 int current_bar;
 bool is_buy,is_sell;
+int buy_count,sell_count;
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -80,41 +83,38 @@ void OnTick()
       current_bar += 1;
      }
    BuySellCancel();
-   BuySellTranding();
+   BuySellSend();
    BuySellClose();
   }
 
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-void BuySellTranding()
+void BuySellSend()
   {
    if(is_buy)
      {
-      double BB_value = Close[0] - iBands(NULL,0,BB_period,BB_deviation,0,BB_applied_price,MODE_UPPER,0);
+      double BB_value = iBands(NULL,0,BB_period,BB_deviation,0,BB_applied_price,MODE_LOWER,0) - Close[0];
       BB_value = NormalizeDouble(BB_value,Digits);
-      if(BB_value*-1 >= Digits*TradingPosition)
+      if(BB_value >= Point*TradingPosition)
         {
-         OrderSend(NULL,
-                   OP_BUY,
-                   Lot,
-                   Bid,
-                   Slippage,
-                   0,
-                   0,
-                   "MA",
-                   MagicNumber,
-                   0,
-                   Red);
-         is_buy = false;
-        }
-     }
-   else
-      if(is_sell)
-        {
-         double BB_value = Close[0]-iBands(NULL,0,BB_period,BB_deviation,0,BB_applied_price,MODE_LOWER,0);
-         BB_value = NormalizeDouble(BB_value,Digits);
-         if(BB_value >= Digits*TradingPosition)
+         if(buy_count == 0)
+           {
+            OrderSend(NULL,
+                      OP_BUY,
+                      Lot,
+                      Bid,
+                      Slippage,
+                      0,
+                      0,
+                      "MA",
+                      MagicNumber,
+                      0,
+                      Red);
+            buy_count += 1;
+
+           }
+         else
            {
             OrderSend(NULL,
                       OP_SELL,
@@ -127,6 +127,48 @@ void BuySellTranding()
                       MagicNumber,
                       0,
                       Blue);
+            sell_count += 1;
+           }
+         is_buy = false;
+        }
+     }
+   else
+      if(is_sell)
+        {
+         double BB_value = Close[0]-iBands(NULL,0,BB_period,BB_deviation,0,BB_applied_price,MODE_UPPER,0);
+         BB_value = NormalizeDouble(BB_value,Digits);
+         if(BB_value >= Point*TradingPosition)
+           {
+            if(sell_count == 0)
+              {
+               OrderSend(NULL,
+                         OP_SELL,
+                         Lot,
+                         Ask,
+                         Slippage,
+                         0,
+                         0,
+                         "MA",
+                         MagicNumber,
+                         0,
+                         Blue);
+               sell_count += 1;
+              }
+            else
+              {
+               OrderSend(NULL,
+                         OP_BUY,
+                         Lot,
+                         Bid,
+                         Slippage,
+                         0,
+                         0,
+                         "MA",
+                         MagicNumber,
+                         0,
+                         Red);
+               buy_count += 1;
+              }
             is_sell = false;
            }
         }
@@ -162,15 +204,46 @@ void BuySellCancel()
 //+------------------------------------------------------------------+
 void BuySellClose()
   {
-   if(is_buy){
+   for(int i=0; i != NumberOfTry; i++)
+     {
+      int total = OrdersTotal();
+      if(total == 0)
+         return;
+      RefreshRates();
       double ma_value = iBands(NULL,0,BB_period,BB_deviation,0,BB_applied_price,MODE_MAIN,0);
-      if(ma_value <= Bid){
-      
-      }
-   }else if(is_sell){
-      double ma_value = iBands(NULL,0,BB_period,BB_deviation,0,BB_applied_price,MODE_MAIN,0);
-      if(ma_value >= Ask){
-      }
-   }
+      ma_value = NormalizeDouble(ma_value,Digits);
+      for(int j=0; j<total; j++)
+        {
+         if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES))
+           {
+            if(OrderType() == OP_BUY)
+              {
+               if(ma_value == Close[0])
+                 {
+                  OrderClose(OrderTicket(),OrderLots(),Close[0], Slippage, White);
+                  buy_count -= 1;
+                 }
+              }
+            else
+               if(OrderType() == OP_SELL)
+                 {
+                  if(ma_value == Close[0])
+                    {
+                     OrderClose(OrderTicket(),OrderLots(),Close[0], Slippage, White);
+                     sell_count -= 1;
+                    }
+                 }
+           }
+        }
+     }
+  }
+//+------------------------------------------------------------------+
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void RiskPosition()
+  {
+
   }
 //+------------------------------------------------------------------+
