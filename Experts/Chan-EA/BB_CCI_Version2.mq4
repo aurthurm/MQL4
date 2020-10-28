@@ -1,5 +1,5 @@
 //+------------------------------------------------------------------+
-//|                                        BB_RSI_CostAverage.mq4 |
+//|                                        BB_RSI_Version2.mq4       |
 //|                        Copyright 2020, MetaQuotes Software Corp. |
 //|                                             https://www.mql5.com |
 //+------------------------------------------------------------------+
@@ -10,7 +10,7 @@
 
 //------- external parameters ---------------------------------------+
 extern string             nameInd1           = "___________BB__________";  // BB
-extern int                BB_period          = 14;                          // BB period
+extern int                BB_period          = 14;                         // BB period
 extern ENUM_APPLIED_PRICE BB_applied_price   = PRICE_CLOSE;                // BB applied price
 extern double BB_deviation                   = 2.0;                        // BB deviation
 extern string             nameInd2           = "___________CCI_________";  // CCI
@@ -19,15 +19,15 @@ extern int                CCI_up_level        = 100;                       // le
 extern int                CCI_dn_level        = -100;                      // level down - CCI
 extern ENUM_APPLIED_PRICE CCI_applied_price  = PRICE_CLOSE;                // CCI applied price
 extern string             EA_properties      = "_________Expert_________"; // Expert properties
-extern double             Lot                = 0.01;                        // Lot
+extern double             Lot                = 0.01;                       // Lot
 extern int                AllowLoss          = 300;                        // allow Loss, 0 - close by Stocho
 extern int                TrailingStop       = 300;                        // Trailing Stop, 0 - close by Stocho
 extern int                Slippage           = 10;                         // Slippage
 extern int                NumberOfTry        = 5;                          // number of trade attempts
 extern int                MagicNumber        = 5577555;                    // Magic Number
 extern int                TradingPosition    = 100;
-extern int                CCIGradient        = 50;                        // CCI Gradient
-
+extern int                CCIGradient        = 50;                         // CCI Gradient
+extern int                BackStepTrends     = 2;                         
 
 //global variable
 int current_bar;
@@ -235,3 +235,25 @@ void BuySellClose()
      }
   }
 //+------------------------------------------------------------------+
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void RiskPosition()
+  {
+
+  }
+//+------------------------------------------------------------------+
+
+
+int CheckTrends(int mode){
+   int count = 0;
+   for(int i=1; i<=BackStepTrends; i++){
+      double bands_value = iBands(NULL,0,BB_period,BB_deviation,0,BB_applied_price,mode,i);
+      double compare = (mode == 1) ? Close[i] - bands_value : bands_value - Close[i];
+      if(compare < 0){
+         count += 1;
+      }
+   }
+   return count;
+}
