@@ -19,12 +19,16 @@ extern double Lots = 1.0;
 extern double take_profit = 30;
 extern double stop_loss = 100;
 ModuleMQL4 *module;
+datetime time;
 
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
 int OnInit()
   {
+   time = TimeCurrent();
+   Print("current Time : ",time);
+   Print("after Time : ",time+30);
    module = new ModuleMQL4();
    return(INIT_SUCCEEDED);
   }
@@ -34,10 +38,8 @@ int OnInit()
 //+------------------------------------------------------------------+
 void OnTick()
   {
-   double BB_value = Close[1] - iBands(NULL,0,14,2,0,PRICE_CLOSE,MODE_LOWER,1);
-   BB_value = NormalizeDouble(BB_value,Digits);
-   Print(BB_value," , ",Point*100);
-
+ 
+   //Print(TimeCurrent());
   }
 
 //+------------------------------------------------------------------+

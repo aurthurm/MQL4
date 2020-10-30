@@ -27,12 +27,12 @@ extern int                NumberOfTry        = 5;                          // nu
 extern int                MagicNumber        = 5577555;                    // Magic Number
 extern int                TradingPosition    = 100;
 extern int                CCIGradient        = 50;                         // CCI Gradient
-extern int                BackStepTrends     = 2;                         
-
 //global variable
 int current_bar;
 bool is_buy,is_sell;
 int sell_count,buy_count;
+
+
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -101,7 +101,7 @@ void BuySellSend()
       double CCI_value = MathAbs(iCCI(NULL,0,CCI_period,CCI_applied_price,0)-iCCI(NULL,0,CCI_period,CCI_applied_price,1));
       if(is_buy)
         {
-         if(CCI_value >= CCIGradient || sell_count > buy_count)
+         if(RiskPosition(Open,Close) || CCI_value >= CCIGradient || sell_count > buy_count)
            {
             OrderSend(NULL,
                       OP_SELL,
@@ -114,6 +114,7 @@ void BuySellSend()
                       MagicNumber,
                       0,
                       Blue);
+
             sell_count += 1;
            }
          else
@@ -135,7 +136,7 @@ void BuySellSend()
         }
       else
         {
-         if(CCI_value >= CCIGradient || buy_count > sell_count)
+         if(RiskPosition(Close,Open) || CCI_value >= CCIGradient || buy_count > sell_count)
            {
             OrderSend(NULL,
                       OP_BUY,
@@ -210,7 +211,7 @@ void BuySellClose()
       ma_value = NormalizeDouble(ma_value,Digits);
       for(int j=0; j<total; j++)
         {
-         if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES))
+         if(OrderSelect(j,SELECT_BY_POS,MODE_TRADES))
            {
             if(OrderType() == OP_BUY)
               {
@@ -239,21 +240,28 @@ void BuySellClose()
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-void RiskPosition()
+bool RiskPosition(const double& OneArray[],const double& TwoArray[])
   {
-
+   bool flag = (OneArray[4] > TwoArray[4] && OneArray[3] > TwoArray[3] && OneArray[2] > TwoArray[2] && OneArray[1] > TwoArray[1]);
+   //if(flag)
+   //  {
+   //   for(int j=0; j<OrdersTotal(); j++)
+   //     {
+   //      if(OrderSelect(j,SELECT_BY_POS,MODE_TRADES))
+   //        {
+   //         OrderClose(OrderTicket(),OrderLots(),Close[0], Slippage, White);
+   //         if(OrderType() == OP_BUY)
+   //            buy_count -= 1;
+   //         else
+   //            sell_count -= 1;
+   //        }
+   //     }
+   //  }
+   return flag;
   }
+  
+  
+  
 //+------------------------------------------------------------------+
 
-
-int CheckTrends(int mode){
-   int count = 0;
-   for(int i=1; i<=BackStepTrends; i++){
-      double bands_value = iBands(NULL,0,BB_period,BB_deviation,0,BB_applied_price,mode,i);
-      double compare = (mode == 1) ? Close[i] - bands_value : bands_value - Close[i];
-      if(compare < 0){
-         count += 1;
-      }
-   }
-   return count;
-}
+//+------------------------------------------------------------------+

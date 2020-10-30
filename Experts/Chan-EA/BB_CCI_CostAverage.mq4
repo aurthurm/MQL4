@@ -210,7 +210,7 @@ void BuySellClose()
       ma_value = NormalizeDouble(ma_value,Digits);
       for(int j=0; j<total; j++)
         {
-         if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES))
+         if(OrderSelect(j,SELECT_BY_POS,MODE_TRADES))
            {
             if(OrderType() == OP_BUY)
               {
