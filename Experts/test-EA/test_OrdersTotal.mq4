@@ -39,7 +39,7 @@ int OnInit()
 void OnTick()
   {
  
-   //Print(TimeCurrent());
+   Print(iStochastic(NULL,0,5,3,3,MODE_SMA,0,0,1));
   }
 
 //+------------------------------------------------------------------+
