@@ -38,8 +38,14 @@ int OnInit()
 //+------------------------------------------------------------------+
 void OnTick()
   {
- 
-   Print(iStochastic(NULL,0,5,3,3,MODE_SMA,0,0,1));
+
+   int ticket = OrderSend(NULL,OP_BUY,0.01,Ask,10,0,0,"NULL",1000,0,Blue);
+   Print("Send ticket : ",ticket);
+   bool flag = OrderModify(ticket,Ask,0,Ask+(30*Point),0,Blue);
+   if(!flag){
+      Print("Error in OrderModify. Error code=",GetLastError()); 
+   }
+  
   }
 
 //+------------------------------------------------------------------+
