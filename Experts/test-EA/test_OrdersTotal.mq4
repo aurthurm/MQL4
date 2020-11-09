@@ -18,6 +18,7 @@ extern int MagicNo = 1445029;
 extern double Lots = 1.0;
 extern double take_profit = 30;
 extern double stop_loss = 100;
+extern int count_cci = 2;
 ModuleMQL4 *module;
 datetime time;
 
@@ -26,10 +27,7 @@ datetime time;
 //+------------------------------------------------------------------+
 int OnInit()
   {
-   time = TimeCurrent();
-   Print("current Time : ",time);
-   Print("after Time : ",time+30);
-   module = new ModuleMQL4();
+
    return(INIT_SUCCEEDED);
   }
 
@@ -38,14 +36,18 @@ int OnInit()
 //+------------------------------------------------------------------+
 void OnTick()
   {
+//Print("High : ",High[iHighest(NULL,0,MODE_HIGH,10,5)]);
+   int index,count = 0;
+   double close_price = Close[0];
+   double value = iCustom(NULL,0,"Extern/waverider zigzag.ex4",0,cnt);
+   while(value == 0x7fffffff && count != 2)
+     {
+      value = iCustom(NULL,0,"Extern/waverider zigzag.ex4",0,index);
+      if(value != 0x7fffffff) break;
+      index+=1;
+     }
+   Print(value);
 
-   int ticket = OrderSend(NULL,OP_BUY,0.01,Ask,10,0,0,"NULL",1000,0,Blue);
-   Print("Send ticket : ",ticket);
-   bool flag = OrderModify(ticket,Ask,0,Ask+(30*Point),0,Blue);
-   if(!flag){
-      Print("Error in OrderModify. Error code=",GetLastError()); 
-   }
-  
   }
 
 //+------------------------------------------------------------------+

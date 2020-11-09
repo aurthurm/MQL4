@@ -63,6 +63,7 @@ int start()
 //+------------------------------------------------------------------+
 string AlligatorRetrace(string sym,int TF,int shift)
   {
+    
    string A="No Pattern...";
    double lips =iAlligator(sym,TF,13,8,8,5,5,3,MODE_SMMA,PRICE_MEDIAN,MODE_GATORLIPS,shift);
    double teeth=iAlligator(sym,TF,13,8,8,5,5,3,MODE_SMMA,PRICE_MEDIAN,MODE_GATORTEETH,shift);
