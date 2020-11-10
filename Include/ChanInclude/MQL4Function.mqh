@@ -21,5 +21,11 @@ class ModuleMQL4{
       void ShowError(){
          Print("Error : ", ErrorDescription(GetLastError()));
       }
+      void CurrentTime(datetime &time){
+         if(Time[0] != time){
+            time = Time[0];
+            Print("Not Matching Time");
+         }
+      }
    private:
 };
