@@ -22,6 +22,8 @@ extern string EA_properties = "___________Expert___________";     // Expert prop
 extern double Lot = 0.01;                                         // Lot
 extern int AllowLoss = 300;                                       // allow Loss, 0 - close by Stocho
 extern int TrailingStop = 300;                                    // Trailing Stop, 0 - close by Stocho
+extern int StopLoss = 100;                                        // StopLoss Point Number
+extern int TakeProfit = 300;                                      // TakeProfit Point Number
 extern int Slippage = 10;                                         // Slippage
 extern int NumberOfTry = 5;                                       // number of trade attempts
 extern int MagicNumber = 5577555;                                 // Magic Number
@@ -35,8 +37,6 @@ bool is_buy, is_sell;
 //+------------------------------------------------------------------+
 int OnInit()
 {
-
-
   stochasticBreak = new StochasticBreak();
   return (INIT_SUCCEEDED);
 }
@@ -45,7 +45,8 @@ int OnInit()
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason)
 {
-  if(stochasticBreak != NULL){
+  if (stochasticBreak != NULL)
+  {
     delete stochasticBreak;
     stochasticBreak = NULL;
   }
@@ -55,42 +56,130 @@ void OnDeinit(const int reason)
 //+------------------------------------------------------------------+
 void OnTick()
 {
-  if (Time[0] != current_time)
+  stochasticBreak.MaxMinCalculate(current_time);
+  if (is_sell || is_buy)
   {
-    current_time = Time[0];
+    stochasticBreak.CloseSend();
   }
-  stochasticBreak.MaxMinCalculate();
 }
 
 class StochasticBreak
 {
 private:
+  double high;
+  double low;
 public:
   StochasticBreak() {}
   ~StochasticBreak() {}
-  void MaxMinCalculate()
+  void MaxMinCalculate(datetime &current_time)
   {
-    int index, count = 0;
-    double value, high;
-    double low = 0x7fffffff;
-    while (count != 2)
+    if (Time[0] != current_time)
     {
-      value = iCustom(NULL, 0, "Extern/waverider zigzag.ex4", 0, index);
-      if (value != 0x7fffffff)
+      int index, count = 0;
+      double value;
+      high = 0;
+      low = 0x7fffffff;
+      while (count != 3)
       {
-        high = (value > high) ? value : high;
-        low = (value < low) ? value : low;
-        count += 1;
+        value = iCustom(NULL, 0, "Extern/waverider zigzag.ex4", 0, index);
+        if (value != 0x7fffffff)
+        {
+          high = (value > high) ? value : high;
+          low = (value < low) ? value : low;
+          count += 1;
+        }
+        index += 1;
       }
-      index += 1;
+      Print("high : ",high);
+      Print("lowd : ",low);
+      current_time = Time[0];
+    }
+
+    if (!is_buy && Close[0] > high)
+    {
+      BuySend();
+    }
+    if (!is_sell && Close[0] < low)
+    {
+      SellSend();
     }
   }
-private:
- void BuySend()
+
+  void CloseSend()
   {
+    for (int i = 0; i != NumberOfTry; i++)
+    {
+      int total = OrdersTotal();
+      if (total == 0)
+        return;
+      RefreshRates();
+      for (int j = 0; j < total; j++)
+      {
+        if (OrderSelect(j, SELECT_BY_POS, MODE_TRADES))
+        {
+          if (OrderType() == OP_BUY)
+          {
+            if (Close[0] >= OrderOpenPrice() + (_Point * TakeProfit))
+            {
+              OrderClose(OrderTicket(), OrderLots(), Bid, Slippage, White);
+              is_buy = false;
+            }
+            if (Close[0] <= OrderOpenPrice() - (_Point * StopLoss))
+            {
+              OrderClose(OrderTicket(), OrderLots(), Bid, Slippage, White);
+              is_buy = false;
+            }
+          }
+          if (OrderType() == OP_SELL)
+          {
+            //종가 >= 시장가 매매금액 +(손실*Point)
+            if (Close[0] >= OrderOpenPrice() + (_Point * StopLoss))
+            {
+              OrderClose(OrderTicket(), OrderLots(), Ask, Slippage, White);
+              is_sell = false;
+            }
+            //종가 >= 시장가 매매금액 +(손실*Point)
+            if (Close[0] <= OrderOpenPrice() - (_Point * TakeProfit))
+            {
+              OrderClose(OrderTicket(), OrderLots(), Ask, Slippage, White);
+              is_sell = false;
+            }
+          }
+        }
+      }
+    }
+  }
+
+private:
+  void BuySend()
+  {
+    int ticket = OrderSend(NULL,
+                           OP_BUY,
+                           Lot,
+                           Ask,
+                           Slippage,
+                           0,
+                           0,
+                           "Buy",
+                           MagicNumber,
+                           0,
+                           Blue);
+    is_buy = true;
   }
   void SellSend()
   {
+    int ticket = OrderSend(NULL,
+                           OP_SELL,
+                           Lot,
+                           Bid,
+                           Slippage,
+                           0,
+                           0,
+                           "Sell",
+                           MagicNumber,
+                           0,
+                           Red);
+    is_sell = true;
   }
 };
 StochasticBreak *stochasticBreak;

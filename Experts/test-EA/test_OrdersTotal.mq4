@@ -20,14 +20,12 @@ extern double stop_loss = 100;
 extern int count_cci = 2;
 ModuleMQL4 *module;
 datetime time;
-
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
 int OnInit()
 {
   stochasticBreak = new StochasticBreak();
-  module = new ModuleMQL4();
   return (INIT_SUCCEEDED);
 }
 
@@ -36,95 +34,24 @@ int OnInit()
 //+------------------------------------------------------------------+
 void OnTick()
 {
-  ulong start_time, elapsed_time;
-  start_time = GetMicrosecondCount();
-  module.CurrentTime(time);
-  stochasticBreak.MaxMinCalculate();
-  elapsed_time = GetMicrosecondCount() - start_time;
-  Print("new Instance : ", elapsed_time);
-
-  start_time = GetMicrosecondCount();
-  Test1F();
-  Test2F();
-  elapsed_time = GetMicrosecondCount() - start_time;
-  Print("Function : ", elapsed_time);
-
-
+  if(time != Time[0]){
+     stochasticBreak.MaxMinCalculate();
+     time = Time[0];
+  }
 }
 
-//+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
-void TestFunction(int &aaa)
-{
-  Print(aaa);
-  aaa = 3;
-}
-
-//+------------------------------------------------------------------+
-//| Expert deinitialization function                                 |
-//+------------------------------------------------------------------+
 void OnDeinit(const int reason)
 {
-  //---
-  if (module != NULL)
+  if (stochasticBreak != NULL)
   {
-    delete module;
-    module = NULL;
+    delete stochasticBreak;
+    stochasticBreak = NULL;
   }
-  // if (stochasticBreak != NULL)
-  // {
-  //   delete stochasticBreak;
-  //   stochasticBreak = NULL;
-  // }
 }
-//+------------------------------------------------------------------+
 
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-void AddPostion(double &profit)
-{
-  int total = OrdersTotal();
-  for (int i = 0; i != total; i++)
-  {
-    if (OrderSelect(i, SELECT_BY_POS, MODE_TRADES))
-    {
-      profit += OrderOpenPrice();
-    }
-  }
-  double unit_price = NormalizeDouble(profit / total, 5);
-  Print("profit = ", total * Lots * 100000 * (Bid - unit_price));
-}
-//+------------------------------------------------------------------+
-
-void Test1F()
-{
-  int index, count = 0;
-  double value, high;
-  double low = 0x7fffffff;
-  while (count != 2)
-  {
-    value = iCustom(NULL, 0, "Extern/waverider zigzag.ex4", 0, index);
-    if (value != 0x7fffffff)
-    {
-      high = (value > high) ? value : high;
-      low = (value < low) ? value : low;
-      count += 1;
-    }
-    index += 1;
-  }
-}
-
-void Test2F()
-{
-  if (Time[0] != time)
-  {
-    time = Time[0];
-    Print("Not Matching Time");
-  }
-}
-
 class StochasticBreak
 {
 private:
@@ -133,20 +60,19 @@ public:
   ~StochasticBreak() {}
   void MaxMinCalculate()
   {
-    int index, count = 0;
-    double value, high;
+    int index, count, start = 0;
+    string up_down = "DOWN";
+    double high = 0;
     double low = 0x7fffffff;
-    while (count != 2)
+
+    while (count != 4)
     {
-      value = iCustom(NULL, 0, "Extern/waverider zigzag.ex4", 0, index);
-      if (value != 0x7fffffff)
-      {
-        high = (value > high) ? value : high;
-        low = (value < low) ? value : low;
-        count += 1;
-      }
-      index += 1;
+      start = index;
+      index = TailRecursive(start, index, up_down, high, low);
+      count += 1;
     }
+    Print("high : ",high);
+    Print("low : ",low);
   }
 
 private:
@@ -156,5 +82,35 @@ private:
   void SellSend()
   {
   }
+
+  int TailRecursive(int start,int n,string &up_down, double &high, double &low)
+  {
+    double lips = iAlligator(NULL, 0, 13, 8, 8, 5, 5, 3, MODE_SMMA, PRICE_MEDIAN, MODE_GATORLIPS, n);
+    double teeth = iAlligator(NULL, 0, 13, 8, 8, 5, 5, 3, MODE_SMMA, PRICE_MEDIAN, MODE_GATORTEETH, n);
+    double jaws = iAlligator(NULL, 0, 13, 8, 8, 5, 5, 3, MODE_SMMA, PRICE_MEDIAN, MODE_GATORJAW, n);
+    if(up_down == "UP"){
+      if (iHigh(NULL, 0, n) < MathMin(MathMin(lips, teeth), jaws)){
+        up_down = "DOWN";
+        int bar = iLowest(NULL,0,MODE_LOW,fabs(n-start)+1,start);
+        double ihigh = High[iHighest(NULL,0,MODE_HIGH,fabs(bar-start),start)];
+        Print("bar : ",bar);
+        Print("ihigh : ",ihigh);
+        high = (ihigh > high) ? ihigh : high;
+        return n;
+      }
+    }else if(up_down == "DOWN"){
+      if (iLow(NULL, 0, n) > MathMax(MathMax(lips, teeth), jaws)){
+        up_down = "UP";
+        int bar = iHighest(NULL,0,MODE_HIGH,fabs(n-start)+1,start);
+        double ilow = Low[iLowest(NULL,0,MODE_LOW,fabs(bar-start),start)];
+        Print("bar : ",bar);
+        Print("ilow : ",ilow);
+        low = (ilow < low) ? ilow : low;
+        return n;
+      }
+    }
+    return TailRecursive(start, n + 1, up_down,high, low);
+  }
 };
 StochasticBreak *stochasticBreak;
+//+------------------------------------------------------------------+
