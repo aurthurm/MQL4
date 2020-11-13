@@ -90,8 +90,6 @@ public:
         }
         index += 1;
       }
-      Print("high : ",high);
-      Print("lowd : ",low);
       current_time = Time[0];
     }
 

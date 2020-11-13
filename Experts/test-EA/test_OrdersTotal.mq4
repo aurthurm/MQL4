@@ -34,6 +34,8 @@ int OnInit()
 //+------------------------------------------------------------------+
 void OnTick()
 {
+  Print(Time[0]);
+  Print(Time[0]+30*60);
   if(time != Time[0]){
      stochasticBreak.MaxMinCalculate();
      time = Time[0];
@@ -67,12 +69,13 @@ public:
 
     while (count != 4)
     {
-      start = index;
+      //start = index;
       index = TailRecursive(start, index, up_down, high, low);
       count += 1;
     }
-    Print("high : ",high);
-    Print("low : ",low);
+
+    Print("Final high : ",high);
+    Print("Final low : ",low);
   }
 
 private:
@@ -83,7 +86,7 @@ private:
   {
   }
 
-  int TailRecursive(int start,int n,string &up_down, double &high, double &low)
+  int TailRecursive(int &start,int n,string &up_down, double &high, double &low)
   {
     double lips = iAlligator(NULL, 0, 13, 8, 8, 5, 5, 3, MODE_SMMA, PRICE_MEDIAN, MODE_GATORLIPS, n);
     double teeth = iAlligator(NULL, 0, 13, 8, 8, 5, 5, 3, MODE_SMMA, PRICE_MEDIAN, MODE_GATORTEETH, n);
@@ -94,8 +97,11 @@ private:
         int bar = iLowest(NULL,0,MODE_LOW,fabs(n-start)+1,start);
         double ihigh = High[iHighest(NULL,0,MODE_HIGH,fabs(bar-start),start)];
         Print("bar : ",bar);
+        Print("start : ",start);
+        Print("bar Price : ", Close[bar]);
         Print("ihigh : ",ihigh);
         high = (ihigh > high) ? ihigh : high;
+        start = bar;
         return n;
       }
     }else if(up_down == "DOWN"){
@@ -104,8 +110,10 @@ private:
         int bar = iHighest(NULL,0,MODE_HIGH,fabs(n-start)+1,start);
         double ilow = Low[iLowest(NULL,0,MODE_LOW,fabs(bar-start),start)];
         Print("bar : ",bar);
+        Print("bar Price : ", Close[bar]);
         Print("ilow : ",ilow);
         low = (ilow < low) ? ilow : low;
+        start = bar;
         return n;
       }
     }
