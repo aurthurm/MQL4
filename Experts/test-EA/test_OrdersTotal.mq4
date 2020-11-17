@@ -20,12 +20,14 @@ extern double stop_loss = 100;
 extern int count_cci = 2;
 ModuleMQL4 *module;
 datetime time;
+int count_cci_1 = 3;
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
 int OnInit()
 {
-  stochasticBreak = new StochasticBreak();
+  time = TimeCurrent();
+  stochasticBreak = new StochasticBreak(time);
   return (INIT_SUCCEEDED);
 }
 
@@ -34,12 +36,6 @@ int OnInit()
 //+------------------------------------------------------------------+
 void OnTick()
 {
-  Print(Time[0]);
-  Print(Time[0]+30*60);
-  if(time != Time[0]){
-     stochasticBreak.MaxMinCalculate();
-     time = Time[0];
-  }
 }
 
 void OnDeinit(const int reason)
@@ -57,9 +53,13 @@ void OnDeinit(const int reason)
 class StochasticBreak
 {
 private:
+  datetime time;
 public:
-  StochasticBreak() {}
+  StochasticBreak(datetime time) {
+    this.time = time;
+  }
   ~StochasticBreak() {}
+  
   void MaxMinCalculate()
   {
     int index, count, start = 0;
