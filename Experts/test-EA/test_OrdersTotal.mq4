@@ -26,7 +26,6 @@ int count_cci_1 = 3;
 //+------------------------------------------------------------------+
 int OnInit()
 {
-  time = TimeCurrent();
   stochasticBreak = new StochasticBreak(time);
   return (INIT_SUCCEEDED);
 }
@@ -36,6 +35,21 @@ int OnInit()
 //+------------------------------------------------------------------+
 void OnTick()
 {
+  if (time != Time[0])
+  {
+    for (int i = 0; i < OrdersHistoryTotal(); i++)
+    {
+      if (OrderSelect(i, SELECT_BY_POS, MODE_HISTORY))
+      {
+        if (OrderType() == 6)
+        {
+          Print("OrderOpenTime() : ",OrderOpenTime(),", binance : ", OrderProfit());
+        }
+      }
+    }
+  }
+  //stochasticBreak.MaxMinCalculate();
+  time = Time[0];
 }
 
 void OnDeinit(const int reason)
@@ -63,11 +77,11 @@ public:
   void MaxMinCalculate()
   {
     int index, count, start = 0;
-    string up_down = "DOWN";
+    string up_down = "UP";
     double high = 0;
     double low = 0x7fffffff;
 
-    while (count != 4)
+    while (count != 9)
     {
       //start = index;
       index = TailRecursive(start, index, up_down, high, low);
