@@ -200,7 +200,7 @@ int OnCalculate(const int rates_total,
                 const long &volume[],
                 const int &spread[])
   {
-    int index = rates_total-prev_calculated;
+    int index = MathMax(rates_total-prev_calculated,1);
     for(int i=0; i<index; i++){
       MABuffer1[i] = iMA(NULL, 0, MovingAveragePeriod1, MovingAverageShift1, MovingAverageMethod1, MovingAveragePrice1, i);
       MABuffer2[i] = iMA(NULL, 0, MovingAveragePeriod2, MovingAverageShift2, MovingAverageMethod2, MovingAveragePrice2, i);
