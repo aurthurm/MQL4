@@ -74,7 +74,7 @@ int OnCalculate(const int rates_total,
     SupportLine1Buffers[i] = (PivotPoint[i]*2)-ihigh;
     SupportLine2Buffers[i] = PivotPoint[i]-(ihigh-ilow);
     Resistance1Buffers[i] = (PivotPoint[i]*2)-ilow;
-    Resistance2Buffers[i] = PivotPoint[i]+(ihigh*ilow);
+    Resistance2Buffers[i] = PivotPoint[i]+(ihigh-ilow);
   }
   return (rates_total);
 }

@@ -7,7 +7,6 @@
 class ModuleMQL4
 {
 private:
-   int binance_start;
    datetime binance_time;
    double binance_total;
    double min_lot;
@@ -39,6 +38,11 @@ public:
       }
    }
 
+   bool ValidPeriod(int period){
+      if(period <= 0) return false;
+      return true;
+   }
+
    void ShowError()
    {
       Print("Error : ", ErrorDescription(GetLastError()));
@@ -60,7 +64,6 @@ public:
             }
          }
       }
-      binance_start = OrdersHistoryTotal();
       if (binance_total >= 25500)
       {
          this.min_lot = 0.17;
@@ -75,19 +78,20 @@ public:
       Print("Total Binance : ", binance_total, " , minLot=", this.min_lot, " , MaxLot=", this.max_lot);
       this.division_price = division_price;
    }
-
    void InfoDespositWithdrawal()
    {
-      if (binance_start == OrdersHistoryTotal())
-         return;
-      datetime curremt_time;
-      for (int i = binance_start; i < OrdersHistoryTotal(); i++)
+      bool is_account = false;
+      datetime current_time = binance_time;
+      for (int i = OrdersHistoryTotal(); i >= 0; i--)
       {
          if (OrderSelect(i, SELECT_BY_POS, MODE_HISTORY))
          {
-            if (OrderType() == 6)
+            if (OrderOpenTime() <= current_time)
+               break;
+            if (OrderType() == 6 && !is_account)
             {
-               curremt_time = OrderOpenTime();
+               is_account = true;
+               binance_time = OrderOpenTime();
             }
             if (OrderType() > 5)
             {
@@ -95,9 +99,8 @@ public:
             }
          }
       }
-      if (curremt_time != binance_time)
+      if (is_account)
       {
-         binance_time = curremt_time;
          if (binance_total >= 25500)
          {
             this.min_lot = 0.17;
@@ -106,12 +109,11 @@ public:
          else
          {
             int num = binance_total / division_price;
-            this.min_lot = num * min_lot;
-            this.max_lot = num * max_lot;
+            min_lot *= num;
+            max_lot *= num;
          }
          Print("Total Binance : ", binance_total, " , minLot=", this.min_lot, " , MaxLot=", this.max_lot);
       }
-      binance_start = OrdersHistoryTotal();
    }
 
 private:
