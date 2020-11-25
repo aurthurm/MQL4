@@ -37,7 +37,8 @@ void OnTick()
 {
   if (time != Time[0])
   { 
-    stochasticBreak.MaxMinCalculate();
+    //stochasticBreak.MaxMinCalculate();
+    Print(iStochastic(NULL,0,5,3,3,MODE_SMA,0,0,1));
     time = Time[0];
   }
 }
