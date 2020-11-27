@@ -5,6 +5,9 @@
 
 #include <ChanInclude/MQL4Function.mqh>
 
+#define StrategyTest
+//#define Live
+
 //------- external parameters ---------------------------------------+
 extern string nameInd1 = "___________Stochastic___________"; // Stochastic
 extern int K_period = 5;                                     // Stochastic K period
@@ -35,12 +38,20 @@ extern int Slippage = 10;         // Slippage
 extern int NumberOfTry = 5;       // number of trade attempts
 extern int MagicNumber = 5577555; // Magic Number
 
-bool IsBuySell[4];
+#ifdef Live
+datetime day = __DATE__;
+#else
+int day;
+#endif
+
 ModuleMQL4 *module;
+datetime time;
+datetime init_day;
 
 int OnInit()
 {
   module = new ModuleMQL4();
+  trading = new Trading();
   if (!module.ValidPeriod(K_period))
   {
     Comment("Invalid Period !");
@@ -82,104 +93,201 @@ void OnDeinit(const int reason)
     delete module;
     module = NULL;
   }
+
+  if (trading != NULL)
+  {
+    delete trading;
+    trading = NULL;
+  }
 }
 
 void OnTick()
 {
+#ifdef Live
+  //live Trading
+  if (day <= TimeCurrent())
+  {
+    init_day = time[0];
+    trading.InitData();
+    day += (60 * 60 * 24);
+    Print("day : ", day);
+    return;
+  }
+#else
+  //Strategy Tester
+  //unix time -> current day
+  double double_day = ((double)Time[0] / (double)31536000) - ((int)(Time[0] / 31536000));
+  int int_day = (int)(NormalizeDouble(double_day * 365, 8));
+  if (day != int_day)
+  {
+    init_day = Time[0];
+    trading.InitData();
+    day = int_day;
+    return;
+  }
+#endif
+
+  if (init_day != Time[0] && Time[0] != time)
+  {
+    double pivot_s1 = iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 1, 0);
+    trading.CalculationDIAverage();
+    time = Time[0];
+  }
+
+  //trading.BuySignal();
+  //trading.SellSignal();
 }
 
 class Trading
 {
 private:
-  /* data */
+  bool IsBuySell[4];
+  double average_plusdi;
+  double average_minusdi;
+  bool is_plus_di;
+  bool is_minus_di;
+  int count_di;
+
 public:
   Trading(/* args */) {}
 
   ~Trading() {}
 
-  int BuySignal()
+  void InitData()
   {
-    double lot = Lot;
-    if(BuyPivotAutoLot(lot) && BuyIsCCIStoch() ){
-      int ticket = OrderSend(NULL, OP_BUY, lot, Ask, Slippage, 0, 0, "Pivot", MagicNumber, 0, Blue);
+    is_minus_di = false;
+    is_plus_di = false;
+    count_di = 0;
+    average_minusdi = iADX(NULL, 0, ADX_period, ADX_Price, 2, 0);
+    average_plusdi = iADX(NULL, 0, ADX_period, ADX_Price, 1, 0);
+  }
+
+  void CalculationDIAverage()
+  {
+    average_minusdi = trading.AverageMinusDI();
+    average_plusdi = trading.AveragePlusDI();
+  }
+
+  void Validation()
+  {
+    if (average_plusdi > average_minusdi)
+    {
+      BuySignal();
+    }
+    else if (average_plusdi < average_minusdi)
+    {
+      SellSignal();
     }
   }
 
-  int SellSignal()
+private:
+  void BuySignal()
   {
-    double lot = Lot;
-     if(SellPivotAutoLot(lot) && SellIsCCIStoch()){
-       int ticket = OrderSend(NULL, OP_BUY, lot, Ask, Slippage, 0, 0, "Pivot", MagicNumber, 0, Red);
-    } 
+    double pivot_value = iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 0, 6);
+    if (UpperADX(average_plusdi) && Close[0] > pivot_value)
+    {
+      double stoploss,profit;
+      MakePosition(2,stoploss,profit);
+      int ticket = OrderSend(NULL,OP_BUY,Lot,Ask,Slippage,0,0,"BUY",MagicNumber,0,Blue);
+      OrderModify(ticket, Ask, stoploss, profit, 0, Blue);
+    }
   }
 
-private:
+  void SellSignal()
+  {
+    double pivot_value = iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 0, 5);
+    if (UpperADX(average_minusdi) && Close[0] < pivot_value)
+    {
+      double stoploss,profit;
+      MakePosition(1,stoploss,profit);
+      int ticket = OrderSend(NULL,OP_SELL,Lot,Bid,Slippage,0,0,"SELL",MagicNumber,0,Red);
+      OrderModify(ticket, Bid, stoploss, profit, 0, Red);
+    }
+  }
 
-  bool DICross(double value1, double value2)
+  // High Point Of DI < ADX
+  bool UpperADX(const double value)
   {
     double adx_value = iADX(NULL, 0, ADX_period, ADX_Price, 0, 0);
-    return ((adx_value > value2) && (value1 > value2)) ? true : false;
+    return adx_value > value;
   }
 
-  bool BuyIsCCIStoch()
+  // CCI or Stochastic Sell Signal
+  bool SellIsCCIStoch()
   {
     double CCI_value = iCCI(NULL, 0, CCI_period, CCI_Price, 0);
     double Stoch_value = iStochastic(NULL, 0, K_period, D_period, Slow_period, Stoch_Method, 0, 0, 0);
     return ((CCI_value > CCI_max) || (Stoch_value > stoch_max)) ? true : false;
   }
 
-  bool SellIsCCIStoch()
+  // CCI or Stochastic Buy Signal
+  bool BuyIsCCIStoch()
   {
     double CCI_value = iCCI(NULL, 0, CCI_period, CCI_Price, 0);
     double Stoch_value = iStochastic(NULL, 0, K_period, D_period, Slow_period, Stoch_Method, 0, 0, 0);
     return ((CCI_value < CCI_min) || (Stoch_value < stoch_min)) ? true : false;
   }
 
-  bool BuyPivotAutoLot(double &lot)
+
+  // 이익, 청산 포지션 설정
+  /** mode
+   *  1. sell
+   *  2. buy 
+  **/
+  void MakePosition(int mode, double &stoploss, double &profit)
   {
-    double pivot_s1 = iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 1, 0);
-    double pivot_s2 = iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 2, 0);
-    double pivot_pp = iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 0, 0);
+    double pivot[7];
+    pivot[0] = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 6, 0),_Digits);
+    pivot[1] = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 2, 0),_Digits);
+    pivot[2] = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 1, 0),_Digits);
+    pivot[3] = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 0, 0),_Digits);
+    pivot[4] = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 3, 0),_Digits);
+    pivot[5] = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 4, 0),_Digits);
+    pivot[6] = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 5, 0),_Digits);
 
-    double plus_value = iADX(NULL, 0, ADX_period, ADX_Price, 1, 0);
-    double minus_value = iADX(NULL, 0, ADX_period, ADX_Price, 2, 0);
 
-    if (!IsBuySell[0] && Close[0] >= pivot_s2 && DICross(plus_value, minus_value))
-    {
-      lot *= Weight;
-      IsBuySell[0] = true;
-      return true;
-    }
-
-    return (!IsBuySell[1] && Close[0] >= pivot_s1 && DICross(plus_value, minus_value))
-    {
-      IsBuySell[1] = true;
-      return true;
-    }
-    return false;
   }
 
-  bool SellPivotAutoLot(double &lot)
+  //High Point Average of -DI
+  //-DI 의 고점 평균
+  double AverageMinusDI()
   {
-    double pivot_r1 = iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 3, 0);
-    double pivot_r2 = iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 4, 0);
-    double pivot_pp = iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 0, 0);
-
-    double plus_value = iADX(NULL, 0, ADX_period, ADX_Price, 1, 0);
-    double minus_value = iADX(NULL, 0, ADX_period, ADX_Price, 2, 0);
-
-    if (!IsBuySell[3] && Close[0] <= pivot_r2 && DICross(minus_value, plus_value))
+    double adx_value1 = iADX(NULL, 0, ADX_period, ADX_Price, 2, 1);
+    double adx_value2 = iADX(NULL, 0, ADX_period, ADX_Price, 2, 2);
+    if (!is_minus_di)
     {
-      lot *= Weight;
-      IsBuySell[3] = true;
-      return true;
+      is_minus_di = (adx_value1 > adx_value2);
+      return average_minusdi;
     }
-
-    if (!IsBuySell[4] && Close[0] <= pivot_r1 && DICross(minus_value, plus_value))
+    if (adx_value1 - adx_value2 < 0)
     {
-      IsBuySell[4] = true
-      return true;
+      count_di += 1;
+      is_minus_di = false;
+      double return_value = NormalizeDouble((count_di != 1) ? ((average_minusdi * (count_di - 1)) + adx_value2) / count_di : adx_value2, _Digits);
+      return return_value;
     }
-    return false;
+    return average_minusdi;
+  }
+
+  //High Point Average of +DI
+  //+DI 의 고점 평균
+  double AveragePlusDI()
+  {
+    double adx_value1 = iADX(NULL, 0, ADX_period, ADX_Price, 1, 1);
+    double adx_value2 = iADX(NULL, 0, ADX_period, ADX_Price, 1, 2);
+    if (!is_plus_di)
+    {
+      is_plus_di = (adx_value1 > adx_value2);
+      return average_plusdi;
+    }
+    if (adx_value1 - adx_value2 < 0)
+    {
+      count_di += 1;
+      is_plus_di = false;
+      double return_value = NormalizeDouble((count_di != 1) ? ((average_plusdi * (count_di - 1)) + adx_value2) / count_di : adx_value2, _Digits);
+      return return_value;
+    }
+    return average_plusdi;
   }
 };
+Trading *trading;

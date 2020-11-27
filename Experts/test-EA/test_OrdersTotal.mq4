@@ -9,6 +9,8 @@
 #property strict
 #include <ChanInclude/MQL4Function.mqh>
 
+//#define Live
+
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
@@ -33,8 +35,14 @@ int OnInit()
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
+//#define MACRO
 void OnTick()
 {
+  #ifdef MACRO
+    Print("hi");
+  #else
+    Print("hello");
+  #endif
   if (time != Time[0])
   { 
     //stochasticBreak.MaxMinCalculate();

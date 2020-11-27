@@ -3,18 +3,22 @@
 #property version "1.00"
 #property strict
 #property indicator_chart_window
-#property indicator_buffers 5
+#property indicator_buffers 7
 #property indicator_color1 Red
 #property indicator_color2 DarkBlue
 #property indicator_color3 DarkBlue
 #property indicator_color4 Maroon
 #property indicator_color5 Maroon
+#property indicator_color6 Green
+#property indicator_color7 Green
 //Indicator Buffers
 double PivotPoint[];
 double SupportLine1Buffers[];
 double SupportLine2Buffers[];
+double SupportLine3Buffers[];
 double Resistance1Buffers[];
 double Resistance2Buffers[];
+double Resistance3Buffers[];
 
 //+------------------------------------------------------------------+
 //| Custom indicator initialization function                         |
@@ -27,6 +31,8 @@ int OnInit()
   SetIndexBuffer(2, SupportLine2Buffers);
   SetIndexBuffer(3, Resistance1Buffers);
   SetIndexBuffer(4, Resistance2Buffers);
+  SetIndexBuffer(5, Resistance3Buffers);
+  SetIndexBuffer(6, SupportLine3Buffers);
   //---
 
   SetIndexStyle(0, DRAW_SECTION, STYLE_SOLID, 2);
@@ -43,6 +49,12 @@ int OnInit()
 
   SetIndexStyle(4, DRAW_SECTION, STYLE_SOLID, 1);
   SetIndexLabel(4, "R2");
+
+  SetIndexStyle(5, DRAW_SECTION, STYLE_SOLID, 1);
+  SetIndexLabel(5, "R3");
+
+  SetIndexStyle(6, DRAW_SECTION, STYLE_SOLID, 1);
+  SetIndexLabel(6, "S3");
 
   return (INIT_SUCCEEDED);
 }
@@ -75,6 +87,8 @@ int OnCalculate(const int rates_total,
     SupportLine2Buffers[i] = PivotPoint[i]-(ihigh-ilow);
     Resistance1Buffers[i] = (PivotPoint[i]*2)-ilow;
     Resistance2Buffers[i] = PivotPoint[i]+(ihigh-ilow);
+    Resistance3Buffers[i] = (2*PivotPoint[i])+(ihigh-(2*ilow));
+    SupportLine3Buffers[i] = (2*PivotPoint[i])-((2*ihigh)-ilow);
   }
   return (rates_total);
 }
