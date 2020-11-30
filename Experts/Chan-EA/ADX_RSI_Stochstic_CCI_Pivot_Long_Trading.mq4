@@ -37,6 +37,7 @@ extern int TakeProfit = 300;      // TakeProfit Point Number
 extern int Slippage = 10;         // Slippage
 extern int NumberOfTry = 5;       // number of trade attempts
 extern int MagicNumber = 5577555; // Magic Number
+extern int LossPoint = 5;         
 
 #ifdef Live
 datetime day = __DATE__;
@@ -129,19 +130,25 @@ void OnTick()
 
   if (init_day != Time[0] && Time[0] != time)
   {
-    double pivot_s1 = iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 1, 0);
     trading.CalculationDIAverage();
     time = Time[0];
   }
 
-  //trading.BuySignal();
-  //trading.SellSignal();
+  trading.Validation();
+  trading.OrdersClose();
 }
 
 class Trading
 {
 private:
-  bool IsBuySell[4];
+ /** 0 : buy , 1 : sell **/
+  bool IsBuySell[2]; 
+  /**
+   * [0][0] : buy profit , [0][1] : but stoploss 
+   * [1][0] : sell profit , [1][1] : sell stoploss
+   * **/
+  double LimitOrder[2][2]; 
+  
   double average_plusdi;
   double average_minusdi;
   bool is_plus_di;
@@ -170,13 +177,57 @@ public:
 
   void Validation()
   {
-    if (average_plusdi > average_minusdi)
+    if (!IsBuySell[0] && average_plusdi > average_minusdi)
     {
       BuySignal();
     }
-    else if (average_plusdi < average_minusdi)
+    else if (!IsBuySell[1] && average_plusdi < average_minusdi)
     {
       SellSignal();
+    }
+  }
+
+  void OrdersClose(){
+    for (int i = 0; i != NumberOfTry; i++)
+    {
+      int total = OrdersTotal();
+      if (total == 0)
+        return;
+      for (int i = 0; i < total; i++)
+      {
+        if (OrderSelect(i, SELECT_BY_POS, MODE_TRADES))
+        {
+          if (OrderMagicNumber() == MagicNumber)
+          {
+            if (OrderType() == OP_BUY)
+            {
+              if (Close[0] >= LimitOrder[0][0])
+              {
+                OrderClose(OrderTicket(), OrderLots(), Close[0], Slippage, White);
+                IsBuySell[0] = false;
+              }
+              else if (Close[0] <= LimitOrder[0][1])
+              {
+                OrderClose(OrderTicket(), OrderLots(), Close[0], Slippage, White);
+                IsBuySell[0] = false;
+              }
+            }
+            else if (OrderType() == OP_SELL)
+            {
+              if (Close[0] >= LimitOrder[1][0])
+              {
+                OrderClose(OrderTicket(), OrderLots(), Close[0], Slippage, White);
+                IsBuySell[1] = false;
+              }
+              else if (Close[0] <= LimitOrder[1][1])
+              {
+                OrderClose(OrderTicket(), OrderLots(), Close[0], Slippage, White);
+                IsBuySell[1] = false;
+              }
+            }
+          }
+        }
+      }
     }
   }
 
@@ -189,7 +240,9 @@ private:
       double stoploss,profit;
       MakePosition(2,stoploss,profit);
       int ticket = OrderSend(NULL,OP_BUY,Lot,Ask,Slippage,0,0,"BUY",MagicNumber,0,Blue);
-      OrderModify(ticket, Ask, stoploss, profit, 0, Blue);
+      IsBuySell[0]  = true;
+      LimitOrder[0][0] = profit;
+      LimitOrder[0][1] = stoploss-(_Point*LossPoint);
     }
   }
 
@@ -201,7 +254,9 @@ private:
       double stoploss,profit;
       MakePosition(1,stoploss,profit);
       int ticket = OrderSend(NULL,OP_SELL,Lot,Bid,Slippage,0,0,"SELL",MagicNumber,0,Red);
-      OrderModify(ticket, Bid, stoploss, profit, 0, Red);
+      IsBuySell[1] = true;
+      LimitOrder[1][0] = profit;
+      LimitOrder[1][1] = stoploss+(_Point*LossPoint);;
     }
   }
 
@@ -237,15 +292,47 @@ private:
   void MakePosition(int mode, double &stoploss, double &profit)
   {
     double pivot[7];
-    pivot[0] = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 6, 0),_Digits);
-    pivot[1] = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 2, 0),_Digits);
-    pivot[2] = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 1, 0),_Digits);
-    pivot[3] = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 0, 0),_Digits);
-    pivot[4] = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 3, 0),_Digits);
-    pivot[5] = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 4, 0),_Digits);
-    pivot[6] = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 5, 0),_Digits);
+    pivot[0] = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 6, 0), _Digits);
+    pivot[1] = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 2, 0), _Digits);
+    pivot[2] = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 1, 0), _Digits);
+    pivot[3] = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 0, 0), _Digits);
+    pivot[4] = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 3, 0), _Digits);
+    pivot[5] = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 4, 0), _Digits);
+    pivot[6] = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 5, 0), _Digits);
+    double value = Close[0];
+    int low,left = 0;
+    int right = ArraySize(pivot)-1;
+    if (mode == 1)
+    {
+      BinarySearch(pivot, value, low, right, profit, stoploss, left);
+      stoploss = (stoploss+((left+1 == ArraySize(pivot)-1) ? pivot[left+1] : pivot[left+2] ))/2;
+    }
+    else
+    {
+      BinarySearch(pivot, value, low ,right, profit, stoploss, left);
+      stoploss -= (_Point*LossPoint);
+    }
+  }
 
-
+  //근사치 구하기(이진 탐색)
+  void BinarySearch(const double &datas[], const double value, const int low, const int high, double &value2, double &value3, int &left){
+    if(low > right) {
+      value2 = datas[low];
+      value3 = datas[right];
+      left = right;
+      return;
+    }
+    int mid = (low+right)/2;
+    if(datas[mid] == value){
+      value2 = datas[mid+1];
+      value3 = datas[mid-1];
+      left = mid-1;
+      return;
+    }else if(datas[mid] < value){
+      BinarySearch(datas , value, mid+1, right, value2, value3);
+    }else{
+      BinarySearch(datas, value, low, mid-1, value2, value3);
+    }
   }
 
   //High Point Average of -DI

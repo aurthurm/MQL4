@@ -29,24 +29,27 @@ int count_cci_1 = 3;
 int OnInit()
 {
   stochasticBreak = new StochasticBreak(time);
+  double array[11] = {1.2, 1.4, 1.5, 2.0, 5.3, 6.2, 6.9, 10.2, 13, 15.5, 16.0};
+  int left = 0; 
+  int right = ArraySize(array) - 1;
+  double value = 1.66232;
+  double profit,stoploss;
+  stochasticBreak.BinarySearch(array, value, left, right, profit, stoploss);
+  Print(profit," , ",stoploss);
   return (INIT_SUCCEEDED);
 }
 
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-//#define MACRO
+#define MACRO
 void OnTick()
 {
-  #ifdef MACRO
-    Print("hi");
-  #else
-    Print("hello");
-  #endif
+ 
   if (time != Time[0])
   { 
     //stochasticBreak.MaxMinCalculate();
-    Print(iStochastic(NULL,0,5,3,3,MODE_SMA,0,0,1));
+    // Print(iStochastic(NULL,0,5,3,3,MODE_SMA,0,0,1));
     time = Time[0];
   }
 }
@@ -94,6 +97,25 @@ public:
 
     Print("Final high : ", high);
     Print("Final low : ", low);
+  }
+
+  //근사치 구하기(이진 탐색)
+  void BinarySearch(const double &datas[], const double value, const int left, const int right, double &value2, double &value3){
+    if(left > right) {
+      value2 = datas[left];
+      value3 = datas[right];
+      return;
+    }
+    int mid = (left+right)/2;
+    if(datas[mid] == value){
+      value2 = datas[mid+1];
+      value3 = datas[mid-1];
+      return;
+    }else if(datas[mid] < value){
+      BinarySearch(datas , value, mid+1, right, value2, value3);
+    }else{
+      BinarySearch(datas, value, left, mid-1, value2, value3);
+    }
   }
 
 private:
@@ -150,6 +172,7 @@ private:
     }
     return TailRecursive(start, n + 1, up_down, high, low);
   }
+
 };
 StochasticBreak *stochasticBreak;
 //+------------------------------------------------------------------+
