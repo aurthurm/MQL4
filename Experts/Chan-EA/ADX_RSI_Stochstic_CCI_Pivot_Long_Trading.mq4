@@ -37,7 +37,7 @@ extern int TakeProfit = 300;      // TakeProfit Point Number
 extern int Slippage = 10;         // Slippage
 extern int NumberOfTry = 5;       // number of trade attempts
 extern int MagicNumber = 5577555; // Magic Number
-extern int LossPoint = 5;         
+extern int LossPoint = 5;
 
 #ifdef Live
 datetime day = __DATE__;
@@ -141,14 +141,20 @@ void OnTick()
 class Trading
 {
 private:
- /** 0 : buy , 1 : sell **/
-  bool IsBuySell[2]; 
+  /** 0 : buy , 1 : sell **/
+  bool IsBuySell[2];
   /**
    * [0][0] : buy profit , [0][1] : but stoploss 
    * [1][0] : sell profit , [1][1] : sell stoploss
    * **/
-  double LimitOrder[2][2]; 
-  
+
+  /**
+   * 배열 정보
+   * 0. Sell : profit , stoploss , current spread
+   * 1. Buy : profit , stoploss , current spread
+   * **/
+  double LimitOrder[2][3];
+
   double average_plusdi;
   double average_minusdi;
   bool is_plus_di;
@@ -156,7 +162,11 @@ private:
   int count_di;
 
 public:
-  Trading(/* args */) {}
+  Trading(/* args */)
+  {
+    IsBuySell[0] = false;
+    IsBuySell[1] = false;
+  }
 
   ~Trading() {}
 
@@ -181,47 +191,48 @@ public:
     {
       BuySignal();
     }
-    else if (!IsBuySell[1] && average_plusdi < average_minusdi)
+    if (!IsBuySell[1] && average_plusdi < average_minusdi)
     {
       SellSignal();
     }
   }
 
-  void OrdersClose(){
+  void OrdersClose()
+  {
     for (int i = 0; i != NumberOfTry; i++)
     {
       int total = OrdersTotal();
       if (total == 0)
         return;
-      for (int i = 0; i < total; i++)
+      for (int j = 0; j < total; j++)
       {
-        if (OrderSelect(i, SELECT_BY_POS, MODE_TRADES))
+        if (OrderSelect(j, SELECT_BY_POS, MODE_TRADES))
         {
           if (OrderMagicNumber() == MagicNumber)
           {
             if (OrderType() == OP_BUY)
             {
-              if (Close[0] >= LimitOrder[0][0])
+              if (Close[0] >= LimitOrder[0][0] && OrderOpenPrice() <= Bid)
               {
-                OrderClose(OrderTicket(), OrderLots(), Close[0], Slippage, White);
+                OrderClose(OrderTicket(), OrderLots(), Bid, Slippage, White);
                 IsBuySell[0] = false;
               }
               else if (Close[0] <= LimitOrder[0][1])
               {
-                OrderClose(OrderTicket(), OrderLots(), Close[0], Slippage, White);
+                OrderClose(OrderTicket(), OrderLots(), Bid, Slippage, White);
                 IsBuySell[0] = false;
               }
             }
-            else if (OrderType() == OP_SELL)
+            if (OrderType() == OP_SELL)
             {
-              if (Close[0] >= LimitOrder[1][0])
+              if (Close[0] <= LimitOrder[1][0] && OrderOpenPrice() >= Ask)
               {
-                OrderClose(OrderTicket(), OrderLots(), Close[0], Slippage, White);
+                OrderClose(OrderTicket(), OrderLots(), Ask, Slippage, White);
                 IsBuySell[1] = false;
               }
-              else if (Close[0] <= LimitOrder[1][1])
+              else if (Close[0] >= LimitOrder[1][1])
               {
-                OrderClose(OrderTicket(), OrderLots(), Close[0], Slippage, White);
+                OrderClose(OrderTicket(), OrderLots(), Ask, Slippage, White);
                 IsBuySell[1] = false;
               }
             }
@@ -234,29 +245,34 @@ public:
 private:
   void BuySignal()
   {
-    double pivot_value = iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 0, 6);
-    if (UpperADX(average_plusdi) && Close[0] > pivot_value)
+    double s3_value = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 6, 0),_Digits);
+    double p3_value = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 5, 0),_Digits);
+    if (BuyIsCCIStoch() && UpperADX(average_plusdi) && Close[0] > s3_value && Close[0] < p3_value)
     {
-      double stoploss,profit;
-      MakePosition(2,stoploss,profit);
-      int ticket = OrderSend(NULL,OP_BUY,Lot,Ask,Slippage,0,0,"BUY",MagicNumber,0,Blue);
-      IsBuySell[0]  = true;
+      double stoploss, profit;
+      MakePosition(2, profit, stoploss);
+      int ticket = OrderSend(NULL, OP_BUY, Lot, Ask, Slippage, 0, 0, "BUY", MagicNumber, 0, Blue);
+      Print(MarketInfo(NULL, MODE_SPREAD));
+      IsBuySell[0] = true;
       LimitOrder[0][0] = profit;
-      LimitOrder[0][1] = stoploss-(_Point*LossPoint);
+      LimitOrder[0][1] = stoploss;
+      LimitOrder[0][2] = MarketInfo(NULL, MODE_SPREAD) * _Point;
     }
   }
 
   void SellSignal()
   {
-    double pivot_value = iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 0, 5);
-    if (UpperADX(average_minusdi) && Close[0] < pivot_value)
+    double s3_value = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 6, 0),_Digits);
+    double p3_value = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 5, 0),_Digits);
+    if (SellIsCCIStoch() && UpperADX(average_minusdi) && Close[0] > s3_value && Close[0] < p3_value)
     {
-      double stoploss,profit;
-      MakePosition(1,stoploss,profit);
-      int ticket = OrderSend(NULL,OP_SELL,Lot,Bid,Slippage,0,0,"SELL",MagicNumber,0,Red);
+      double stoploss, profit;
+      MakePosition(1, profit, stoploss);
+      int ticket = OrderSend(NULL, OP_SELL, Lot, Bid, Slippage, 0, 0, "SELL", MagicNumber, 0, Red);
       IsBuySell[1] = true;
       LimitOrder[1][0] = profit;
-      LimitOrder[1][1] = stoploss+(_Point*LossPoint);;
+      LimitOrder[1][1] = stoploss;
+      LimitOrder[1][2] = MarketInfo(NULL, MODE_SPREAD) * _Point;
     }
   }
 
@@ -272,7 +288,7 @@ private:
   {
     double CCI_value = iCCI(NULL, 0, CCI_period, CCI_Price, 0);
     double Stoch_value = iStochastic(NULL, 0, K_period, D_period, Slow_period, Stoch_Method, 0, 0, 0);
-    return ((CCI_value > CCI_max) || (Stoch_value > stoch_max)) ? true : false;
+    return ((CCI_value < CCI_min) || (Stoch_value < stoch_min)) ? true : false;
   }
 
   // CCI or Stochastic Buy Signal
@@ -280,16 +296,15 @@ private:
   {
     double CCI_value = iCCI(NULL, 0, CCI_period, CCI_Price, 0);
     double Stoch_value = iStochastic(NULL, 0, K_period, D_period, Slow_period, Stoch_Method, 0, 0, 0);
-    return ((CCI_value < CCI_min) || (Stoch_value < stoch_min)) ? true : false;
+    return ((CCI_value > CCI_max) || (Stoch_value > stoch_max)) ? true : false;
   }
-
 
   // 이익, 청산 포지션 설정
   /** mode
    *  1. sell
    *  2. buy 
   **/
-  void MakePosition(int mode, double &stoploss, double &profit)
+  void MakePosition(int mode, double &profit, double &stoploss)
   {
     double pivot[7];
     pivot[0] = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 6, 0), _Digits);
@@ -299,39 +314,63 @@ private:
     pivot[4] = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 3, 0), _Digits);
     pivot[5] = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 4, 0), _Digits);
     pivot[6] = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 5, 0), _Digits);
+
+    // Print("s3 : ", pivot[0]);
+    // Print("s2 : ", pivot[1]);
+    // Print("s1 : ", pivot[2]);
+    // Print("pp : ", pivot[3]);
+    // Print("p1 : ", pivot[4]);
+    // Print("p2 : ", pivot[5]);
+    // Print("p3 : ", pivot[6]);
+    // Print("close : ", Close[0]);
+
     double value = Close[0];
-    int low,left = 0;
-    int right = ArraySize(pivot)-1;
-    if (mode == 1)
-    {
-      BinarySearch(pivot, value, low, right, profit, stoploss, left);
-      stoploss = (stoploss+((left+1 == ArraySize(pivot)-1) ? pivot[left+1] : pivot[left+2] ))/2;
-    }
-    else
-    {
-      BinarySearch(pivot, value, low ,right, profit, stoploss, left);
-      stoploss -= (_Point*LossPoint);
-    }
+    int low = 0;
+    int high = ArraySize(pivot) - 1;
+    BinarySearch(pivot, value, low, high, profit, stoploss, mode);
   }
 
   //근사치 구하기(이진 탐색)
-  void BinarySearch(const double &datas[], const double value, const int low, const int high, double &value2, double &value3, int &left){
-    if(low > right) {
-      value2 = datas[low];
-      value3 = datas[right];
-      left = right;
+  void BinarySearch(const double &datas[], const double value, const int low, const int high, double &profit, double &stoploss, const int mode)
+  {
+    if (low > high)
+    {
+      if (mode == 1)
+      {
+        Print(low," , ",high);
+        profit = NormalizeDouble(high == 0 ? datas[high] - (datas[low] - datas[high]) / 2 : datas[high], _Digits);
+        stoploss = NormalizeDouble(low == ArraySize(datas) - 1 ? datas[low] + (datas[low] - datas[high]) / 2 : (datas[low + 1] + datas[low]) / 2, _Digits);
+        Print("BF stoploss : ",stoploss);
+      }
+      else
+      {
+        profit = NormalizeDouble(low == ArraySize(datas) - 1 ? datas[low] + (datas[low] - datas[high]) / 2 : datas[low], _Digits);
+        stoploss = NormalizeDouble(high == 0 ? datas[high] - (datas[low] - datas[high]) / 2 : (datas[high - 1] + datas[high]) / 2, _Digits);
+      }
       return;
     }
-    int mid = (low+right)/2;
-    if(datas[mid] == value){
-      value2 = datas[mid+1];
-      value3 = datas[mid-1];
-      left = mid-1;
+    int mid = (low + high) / 2;
+    if (datas[mid] == value)
+    {
+      if (mode == 1)
+      {
+        profit = NormalizeDouble(mid - 1 == 0 ? datas[mid - 1] - (datas[mid + 1] - datas[mid - 1]) / 2 : datas[mid - 1], _Digits);
+        stoploss = NormalizeDouble(mid + 1 == ArraySize(datas) - 1 ? datas[mid + 1] + (datas[mid + 1] - datas[mid - 1]) / 2 : (datas[mid + 2] + datas[mid + 1]) / 2, _Digits);
+      }
+      else
+      {
+        profit = NormalizeDouble(mid + 1 == ArraySize(datas) - 1 ? datas[mid + 1] + (datas[mid + 1] - datas[mid - 1]) / 2 : datas[mid + 1], _Digits);
+        stoploss = NormalizeDouble(mid - 1 == 0 ? datas[mid - 1] - (datas[mid + 1] - datas[mid - 1]) / 2 : (datas[mid - 1] + datas[mid - 2]) / 2, _Digits);
+      }
       return;
-    }else if(datas[mid] < value){
-      BinarySearch(datas , value, mid+1, right, value2, value3);
-    }else{
-      BinarySearch(datas, value, low, mid-1, value2, value3);
+    }
+    else if (datas[mid] < value)
+    {
+      BinarySearch(datas, value, mid + 1, high, profit, stoploss, mode);
+    }
+    else
+    {
+      BinarySearch(datas, value, low, mid - 1, profit, stoploss, mode);
     }
   }
 

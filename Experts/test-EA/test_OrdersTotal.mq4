@@ -28,14 +28,14 @@ int count_cci_1 = 3;
 //+------------------------------------------------------------------+
 int OnInit()
 {
+  Print(Bid," = ",Close[0]);
   stochasticBreak = new StochasticBreak(time);
-  double array[11] = {1.2, 1.4, 1.5, 2.0, 5.3, 6.2, 6.9, 10.2, 13, 15.5, 16.0};
+  double array[7] = {1.2, 1.4, 1.5, 2.0, 5.3, 6.2, 6.9};
   int left = 0; 
   int right = ArraySize(array) - 1;
-  double value = 1.66232;
+  double value = 1.3;
   double profit,stoploss;
   stochasticBreak.BinarySearch(array, value, left, right, profit, stoploss);
-  Print(profit," , ",stoploss);
   return (INIT_SUCCEEDED);
 }
 
@@ -101,6 +101,7 @@ public:
 
   //근사치 구하기(이진 탐색)
   void BinarySearch(const double &datas[], const double value, const int left, const int right, double &value2, double &value3){
+    Print(left, " , ", right);
     if(left > right) {
       value2 = datas[left];
       value3 = datas[right];
