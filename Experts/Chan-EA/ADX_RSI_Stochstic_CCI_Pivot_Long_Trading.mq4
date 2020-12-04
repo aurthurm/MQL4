@@ -48,6 +48,8 @@ int day;
 ModuleMQL4 *module;
 datetime time;
 datetime init_day;
+bool is_pulus_di;
+bool is_minus_di;
 
 int OnInit()
 {
@@ -131,6 +133,8 @@ void OnTick()
   if (init_day != Time[0] && Time[0] != time)
   {
     trading.CalculationDIAverage();
+    is_pulus_di = trading.DIDXCross(1);
+    is_minus_di = trading.DIDXCross(2);
     time = Time[0];
   }
 
@@ -144,14 +148,9 @@ private:
   /** 0 : buy , 1 : sell **/
   bool IsBuySell[2];
   /**
-   * [0][0] : buy profit , [0][1] : but stoploss 
-   * [1][0] : sell profit , [1][1] : sell stoploss
-   * **/
-
-  /**
    * 배열 정보
-   * 0. Sell : profit , stoploss , current spread
-   * 1. Buy : profit , stoploss , current spread
+   * 0. Sell , [0][0] profit , [0][1] stoploss , [0][2] current spread
+   * 1. Buy  , [1][0] profit , [1][1] stoploss , [1][2] current spread
    * **/
   double LimitOrder[2][3];
 
@@ -159,6 +158,7 @@ private:
   double average_minusdi;
   bool is_plus_di;
   bool is_minus_di;
+
   int count_di;
 
 public:
@@ -242,12 +242,32 @@ public:
     }
   }
 
+  /**
+   * mode
+   * 1 - Plus DI Cross
+   * 2 - Minus DI Cross
+   * **/
+  bool DIDXCross(const int mode){
+    double adx_value = iADX(NULL, 0, ADX_period, ADX_Price, 0, 1);
+    double previous_plus_di = iADX(NULL, 0, ADX_period, ADX_Price, 1, 2);
+    double previous_minus_di = iADX(NULL, 0, ADX_period, ADX_Price, 2, 2);
+    double current_plus_di = iADX(NULL, 0, ADX_period, ADX_Price, 1, 1);
+    double current_minus_di = iADX(NULL, 0, ADX_period, ADX_Price, 2, 1);
+    // Print("previous_plus_di : ", previous_plus_di);
+    // Print("previous_minus_di : ", previous_minus_di);
+    // Print("current_plus_di : ", current_plus_di);
+    // Print("current_minus_di : ", current_minus_di);
+    // Print("adx_value : ", adx_value);
+
+    return (mode ==1) ? (previous_minus_di > previous_plus_di && current_plus_di > current_minus_di) && (adx_value > current_plus_di) : (previous_plus_di > previous_minus_di && current_minus_di > current_plus_di) && (adx_value > current_minus_di);
+  }
+
 private:
   void BuySignal()
   {
     double s3_value = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 6, 0),_Digits);
     double p3_value = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 5, 0),_Digits);
-    if (BuyIsCCIStoch() && UpperADX(average_plusdi) && Close[0] > s3_value && Close[0] < p3_value)
+    if (/*UpperADX(average_plusdi)*/ is_pulus_di && BuyIsCCIStoch() && Close[0] > s3_value && Close[0] < p3_value)
     {
       double stoploss, profit;
       MakePosition(2, profit, stoploss);
@@ -264,7 +284,7 @@ private:
   {
     double s3_value = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 6, 0),_Digits);
     double p3_value = NormalizeDouble(iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 5, 0),_Digits);
-    if (SellIsCCIStoch() && UpperADX(average_minusdi) && Close[0] > s3_value && Close[0] < p3_value)
+    if (/*UpperADX(average_minusdi)*/ is_minus_di && SellIsCCIStoch() && Close[0] > s3_value && Close[0] < p3_value)
     {
       double stoploss, profit;
       MakePosition(1, profit, stoploss);
@@ -415,5 +435,6 @@ private:
     }
     return average_plusdi;
   }
+
 };
 Trading *trading;

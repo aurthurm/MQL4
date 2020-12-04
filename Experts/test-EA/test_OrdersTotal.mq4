@@ -22,13 +22,18 @@ extern double stop_loss = 100;
 extern int count_cci = 2;
 ModuleMQL4 *module;
 datetime time;
+int bar_count;
 int count_cci_1 = 3;
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
 int OnInit()
 {
-  Print(Bid," = ",Close[0]);
+  Print(_Period);
+  int hour = 60;
+  int day_hour = 24;
+  int BB_period = _Period > 60 ? day_hour/(_Period/hour) : (hour/_Period)*day_hour;
+  Print(BB_period);
   stochasticBreak = new StochasticBreak(time);
   double array[7] = {1.2, 1.4, 1.5, 2.0, 5.3, 6.2, 6.9};
   int left = 0; 
@@ -45,7 +50,6 @@ int OnInit()
 #define MACRO
 void OnTick()
 {
- 
   if (time != Time[0])
   { 
     //stochasticBreak.MaxMinCalculate();
