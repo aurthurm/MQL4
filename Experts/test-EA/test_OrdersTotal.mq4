@@ -8,6 +8,7 @@
 #property version "1.00"
 #property strict
 #include <ChanInclude/MQL4Function.mqh>
+#include <Generic\HashMap.mqh>
 
 //#define Live
 
@@ -29,18 +30,33 @@ int count_cci_1 = 3;
 //+------------------------------------------------------------------+
 int OnInit()
 {
-  Print(_Period);
-  int hour = 60;
-  int day_hour = 24;
-  int BB_period = _Period > 60 ? day_hour/(_Period/hour) : (hour/_Period)*day_hour;
-  Print(BB_period);
-  stochasticBreak = new StochasticBreak(time);
-  double array[7] = {1.2, 1.4, 1.5, 2.0, 5.3, 6.2, 6.9};
-  int left = 0; 
-  int right = ArraySize(array) - 1;
-  double value = 1.3;
-  double profit,stoploss;
-  stochasticBreak.BinarySearch(array, value, left, right, profit, stoploss);
+  // Print(_Period);
+  // int hour = 60;
+  // int day_hour = 24;
+  // int BB_period = _Period > 60 ? day_hour/(_Period/hour) : (hour/_Period)*day_hour;
+  // Print(BB_period);
+  // stochasticBreak = new StochasticBreak(time);
+  // double array[7] = {1.2, 1.4, 1.5, 2.0, 5.3, 6.2, 6.9};
+  // int left = 0; 
+  // int right = ArraySize(array) - 1;
+  // double value = 1.3;
+  // double profit,stoploss;
+  // stochasticBreak.BinarySearch(array, value, left, right, profit, stoploss);
+
+  CHashMap<int, datetime> hashMap;
+
+  hashMap.Add(0,Time[0]);
+  hashMap.Remove(0);
+
+  int key[];
+  string value[];
+
+  datetime values;
+
+  hashMap.TryGetValue(0,values);
+
+  Print("keysss : ",values);
+
   return (INIT_SUCCEEDED);
 }
 
