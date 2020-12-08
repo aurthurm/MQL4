@@ -4,7 +4,7 @@
 #property strict
 
 #include <ChanInclude/MQL4Function.mqh>
-#include <Generic\HashMap.mqh>
+#include <Generic/HashMap.mqh>
 
 #define StrategyTest
 //#define Live
@@ -99,6 +99,10 @@ void OnTick()
 
   if (Time[0] != time)
   {
+    Print("Server Time : ",TimeCurrent());
+    Print("GMT Time : ",TimeGMT());
+    Print(TimeLocal());
+    //Print(TimeGMTOffset()-TimeCurrent());
     time = Time[0];
   }
 
@@ -107,6 +111,10 @@ void OnTick()
   //trading.CCIOrdersClose();
 }
 
+const static string keyName1 = "OutSideBB";
+const static string keyName2 = "InsideBB";
+const static string KeyName3 = "BuyClose";
+const static string KeyName4 = "SellClose";
 class Trading
 {
 private:
@@ -133,8 +141,13 @@ public:
   {
     LimitOrder[0][3] = -1;
     LimitOrder[1][3] = -1;
+    //Print(TimeGMT())
   }
   ~Trading() {}
+
+  void AllClose(){
+    
+  }
 
   void Validation()
   {
@@ -218,98 +231,126 @@ private:
     double cci_value = iCCI(NULL, 0, CCI_period, CCI_Price, 1);
     if (Close[0] > bb_value && UpperADX(1) && cci_value >= CCI_max)
     {
-      Print("cci value1 : ", cci_value);
-      Print("cci value2 : ",iCCI(NULL, 0, CCI_period, CCI_Price, 1));
-      double adx_value = iADX(NULL, 0, ADX_period, ADX_Price, 0, 0);
+      // double adx_value = iADX(NULL, 0, ADX_period, ADX_Price, 0, 0);
+      // double stoploss, profit;
+      // int ticket;
+      // datetime close_time;
+      // timeMap.TryGetValue("BuyClose", close_time);
+      // Print("buy close_time = ", close_time);
+      // if (close_time == Time[0])
+      // {
+      //   MakePosition(1, profit, stoploss);
+      //   LimitOrder[0][3] = iADX(NULL, 0, ADX_period, ADX_Price, 0, 0);
+      //   ticket = OrderSend(NULL, OP_BUY, Lot, Ask, Slippage, 0, 0, "0", MagicNumber, 0, Blue);
+      //   IsBuySell[0] = true;
+      //   times[0][0] = Time[0];
+      //   LimitOrder[0][0] = profit;
+      //   LimitOrder[0][1] = stoploss;
+      //   LimitOrder[0][2] = MarketInfo(NULL, MODE_SPREAD) * _Point;
+      //   LimitOrder[1][3] = -1;
+      //   timeMap.Remove("BuyClose");
+      //   return;
+      // }
+      // timeMap.Remove("BuyClose");
+
+      //======================================================================================================================================
       double stoploss, profit;
-      int ticket;
-      //buy_time == Time[0] || LimitOrder[0][3] == -1 || adx_value > LimitOrder[0][3]
-      datetime close_time;
-      timeMap.TryGetValue("BuyClose", close_time);
-      Print("buy close_time = ", close_time);
-      if (close_time == Time[0])
-      {
-        MakePosition(1, profit, stoploss);
-        LimitOrder[0][3] = iADX(NULL, 0, ADX_period, ADX_Price, 0, 0);
-        ticket = OrderSend(NULL, OP_BUY, Lot, Ask, Slippage, 0, 0, "0", MagicNumber, 0, Blue);
-        IsBuySell[0] = true;
-        times[0][0] = Time[0];
-        LimitOrder[0][0] = profit;
-        LimitOrder[0][1] = stoploss;
-        LimitOrder[0][2] = MarketInfo(NULL, MODE_SPREAD) * _Point;
-        LimitOrder[1][3] = -1;
-        timeMap.Remove("BuyClose");
-        return;
-      }
-
-      timeMap.Remove("BuyClose");
-      if (ADXDIDDifference(1) > ADXDifference)
-      {
-        MakePosition(1, profit, stoploss);
-        LimitOrder[0][3] = iADX(NULL, 0, ADX_period, ADX_Price, 0, 0);
-        ticket = OrderSend(NULL, OP_BUY, Lot, Ask, Slippage, 0, 0, "0", MagicNumber, 0, Blue);
-      }
-      else
-      {
-        MakePosition(2, profit, stoploss);
-        LimitOrder[0][3] = -1;
-        ticket = OrderSend(NULL, OP_SELL, Lot, Bid, Slippage, 0, 0, "0", MagicNumber, 0, Red);
-      }
-
+      MakePosition(1, profit, stoploss);
+      LimitOrder[0][3] = iADX(NULL, 0, ADX_period, ADX_Price, 0, 0);
+      int ticket = OrderSend(NULL, OP_BUY, Lot, Ask, Slippage, 0, 0, "0", MagicNumber, 0, Blue);
       IsBuySell[0] = true;
       times[0][0] = Time[0];
       LimitOrder[0][0] = profit;
       LimitOrder[0][1] = stoploss;
       LimitOrder[0][2] = MarketInfo(NULL, MODE_SPREAD) * _Point;
       LimitOrder[1][3] = -1;
+      //======================================================================================================================================
+
+      //======================================================================================================================================
+      // buy_time == Time[0] || LimitOrder[0][3] == -1 || adx_value > LimitOrder[0][3]
+      // if (ADXDIDDifference(1) > ADXDifference)
+      // {
+      //   MakePosition(1, profit, stoploss);
+      //   LimitOrder[0][3] = iADX(NULL, 0, ADX_period, ADX_Price, 0, 0);
+      //   ticket = OrderSend(NULL, OP_BUY, Lot, Ask, Slippage, 0, 0, "0", MagicNumber, 0, Blue);
+      // }
+      // else
+      // {
+      //   MakePosition(2, profit, stoploss);
+      //   LimitOrder[0][3] = -1;
+      //   ticket = OrderSend(NULL, OP_SELL, Lot, Bid, Slippage, 0, 0, "0", MagicNumber, 0, Red);
+      // }
+
+      // IsBuySell[0] = true;
+      // times[0][0] = Time[0];
+      // LimitOrder[0][0] = profit;
+      // LimitOrder[0][1] = stoploss;
+      // LimitOrder[0][2] = MarketInfo(NULL, MODE_SPREAD) * _Point;
+      // LimitOrder[1][3] = -1;
+      //======================================================================================================================================
     }
   }
 
   void SellSignal()
   {
-    double bb_value = iBands(NULL, 0, BB_period, BB_deviation, 0, BB_Price, 2, 1);
-    double cci_value = iCCI(NULL, 0, CCI_period, CCI_Price, 0);
-    if (Close[0] < bb_value && UpperADX(2) && cci_value <= CCI_min)
+    double bb_value = iBands(NULL, 0, BB_period, BB_deviation, 0, BB_Price, 2, 0);
+    double cci_value = iCCI(NULL, 0, CCI_period, CCI_Price, 1);
+    if (Close[0] < bb_value && UpperADX(2) &&  cci_value <= CCI_min)
     {
-      double adx_value = iADX(NULL, 0, ADX_period, ADX_Price, 0, 0);
-      double stoploss, profit;
-      int ticket;
-      //sell_time == Time[0] || LimitOrder[1][3] == -1 || adx_value > LimitOrder[1][3]
-      datetime close_time;
-      timeMap.TryGetValue("SellClose", close_time);
-      Print("sell close_time = ", close_time);
-      if (close_time == Time[0])
-      {
-        MakePosition(2, profit, stoploss);
-        LimitOrder[1][3] = iADX(NULL, 0, ADX_period, ADX_Price, 0, 0);
-        ticket = OrderSend(NULL, OP_SELL, Lot, Bid, Slippage, 0, 0, "1", MagicNumber, 0, Red);
-        IsBuySell[1] = true;
-        LimitOrder[1][0] = profit;
-        LimitOrder[1][1] = stoploss;
-        LimitOrder[1][2] = MarketInfo(NULL, MODE_SPREAD) * _Point;
-        LimitOrder[0][3] = -1;
-        timeMap.Remove("SellClose");
-        return;
-      }
-      timeMap.Remove("SellClose");
-      if (ADXDIDDifference(2) > ADXDifference)
-      {
-        MakePosition(2, profit, stoploss);
-        LimitOrder[1][3] = iADX(NULL, 0, ADX_period, ADX_Price, 0, 0);
-        ticket = OrderSend(NULL, OP_SELL, Lot, Bid, Slippage, 0, 0, "1", MagicNumber, 0, Red);
-      }
-      else
-      {
-        MakePosition(1, profit, stoploss);
-        LimitOrder[1][3] = -1;
-        ticket = OrderSend(NULL, OP_BUY, Lot, Ask, Slippage, 0, 0, "1", MagicNumber, 0, Blue);
-      }
+      // double adx_value = iADX(NULL, 0, ADX_period, ADX_Price, 0, 0);
+      // double stoploss, profit;
+      // int ticket;
+      // datetime close_time;
+      // timeMap.TryGetValue("SellClose", close_time);
+      // Print("sell close_time = ", close_time);
+      // if (close_time == Time[0])
+      // {
+      //   MakePosition(2, profit, stoploss);
+      //   LimitOrder[1][3] = iADX(NULL, 0, ADX_period, ADX_Price, 0, 0);
+      //   ticket = OrderSend(NULL, OP_SELL, Lot, Bid, Slippage, 0, 0, "1", MagicNumber, 0, Red);
+      //   IsBuySell[1] = true;
+      //   LimitOrder[1][0] = profit;
+      //   LimitOrder[1][1] = stoploss;
+      //   LimitOrder[1][2] = MarketInfo(NULL, MODE_SPREAD) * _Point;
+      //   LimitOrder[0][3] = -1;
+      //   timeMap.Remove("SellClose");
+      //   return;
+      // }
+      // timeMap.Remove("SellClose");
 
+      //======================================================================================================================================
+      double stoploss, profit;
+      MakePosition(2, profit, stoploss);
+      LimitOrder[1][3] = iADX(NULL, 0, ADX_period, ADX_Price, 0, 0);
+      int ticket = OrderSend(NULL, OP_SELL, Lot, Bid, Slippage, 0, 0, "1", MagicNumber, 0, Red);
       IsBuySell[1] = true;
       LimitOrder[1][0] = profit;
       LimitOrder[1][1] = stoploss;
       LimitOrder[1][2] = MarketInfo(NULL, MODE_SPREAD) * _Point;
       LimitOrder[0][3] = -1;
+      //======================================================================================================================================
+
+      //======================================================================================================================================
+      // sell_time == Time[0] || LimitOrder[1][3] == -1 || adx_value > LimitOrder[1][3]
+      // if (ADXDIDDifference(2) > ADXDifference)
+      // {
+      //   MakePosition(2, profit, stoploss);
+      //   LimitOrder[1][3] = iADX(NULL, 0, ADX_period, ADX_Price, 0, 0);
+      //   ticket = OrderSend(NULL, OP_SELL, Lot, Bid, Slippage, 0, 0, "1", MagicNumber, 0, Red);
+      // }
+      // else
+      // {
+      //   MakePosition(1, profit, stoploss);
+      //   LimitOrder[1][3] = -1;
+      //   ticket = OrderSend(NULL, OP_BUY, Lot, Ask, Slippage, 0, 0, "1", MagicNumber, 0, Blue);
+      // }
+
+      // IsBuySell[1] = true;
+      // LimitOrder[1][0] = profit;
+      // LimitOrder[1][1] = stoploss;
+      // LimitOrder[1][2] = MarketInfo(NULL, MODE_SPREAD) * _Point;
+      // LimitOrder[0][3] = -1;
+      //======================================================================================================================================
     }
   }
   // 이익, 청산 포지션 설정

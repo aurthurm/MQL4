@@ -30,6 +30,22 @@ int count_cci_1 = 3;
 //+------------------------------------------------------------------+
 int OnInit()
 {
+  Print("TimeGMT() : ",TimeGMT());
+  Print("TimeCurrnet() : ",TimeCurrent());
+  Print("TimeLocal() : ",TimeLocal());
+  Print((int)(TimeGMT()));
+
+
+  double gmt = (int)TimeGMT();
+  int server_time = (int)TimeCurrent();
+
+  gmt /= (60*60);
+
+  double davalue = (double)gmt/(double)24;
+  davalue -= (int)davalue;
+  Print(davalue*24);
+
+  
   // Print(_Period);
   // int hour = 60;
   // int day_hour = 24;
