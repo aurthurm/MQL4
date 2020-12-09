@@ -23,19 +23,38 @@ double Resistance1Buffers[];
 double Resistance2Buffers[];
 double Resistance3Buffers[];
 
-int IsGMT;
+class Pivot;
+Pivot *pivot;
+
+//=============================Class Function Pointer=============================================
+typedef void (*TFunction)(Pivot *, const int, const int, const datetime &time[]);
+
+void Equlas(Pivot *ptr, const int rates_total, const int prev_calculated, const datetime &time[])
+{
+  ptr.EqualsUnix(rates_total, prev_calculated, time);
+}
+void Plus(Pivot *ptr, const int rates_total, const int prev_calculated, const datetime &time[])
+{
+  ptr.PlusUnix(rates_total, prev_calculated, time);
+}
+void Minus(Pivot *ptr, const int rates_total, const int prev_calculated, const datetime &time[])
+{
+  ptr.MinusUnix(rates_total, prev_calculated, time);
+}
+TFunction func;
+//=================================================================================================
+
 //+------------------------------------------------------------------+
 //| Custom indicator initialization function                         |
 //+------------------------------------------------------------------+
 int OnInit()
 {
-  int server_unix = (int)TimeCurrent();
-  int gmt_unix = (int)TimeGMT();
+  pivot = new Pivot();
+  //pivot.UnixToClock();
 
-  int server_time = pivot.CalculateTime(server_unix);
-  int gmt_time = pivot.CalculateTime(gmt_unix);
-
-  IsGMT = server_time-gmt_time;
+  double gmt = (int)TimeGMT();
+  int server_time = (int)TimeCurrent();
+  Print(server_time-gmt);
 
   //--- indicator buffers mapping
   SetIndexBuffer(0, PivotPoint);
@@ -68,7 +87,8 @@ int OnInit()
   SetIndexStyle(6, DRAW_SECTION, STYLE_SOLID, 1);
   SetIndexLabel(6, "S3");
 
-  if(_Period >= 1440){
+  if (_Period >= 1440)
+  {
     Print("Invalid TimeFrame");
     return (INIT_FAILED);
   }
@@ -89,14 +109,18 @@ int OnCalculate(const int rates_total,
                 const long &volume[],
                 const int &spread[])
 {
-  if(IsGMT > 0){
-
-  }else if(IsGMT == 0){
-    pivot.EqualsUnix(rates_total,prev_calculated,time);
-  }else{
-
-  }
+  func(pivot,rates_total,prev_calculated,time);
   return (rates_total);
+}
+
+void OnDeinit(const int reason)
+{
+  if (pivot != NULL)
+  {
+    delete pivot;
+    pivot = NULL;
+  }
+  return;
 }
 
 class Pivot
@@ -105,6 +129,7 @@ private:
   double low;
   double high;
   double close;
+  int time_difference;
 
 public:
   Pivot()
@@ -116,15 +141,42 @@ public:
   {
   }
 
-  int CalculateTime(int &unix)
+  void UnixToClock()
   {
-    unix /= (60 * 60);
-    double d_hour = (double)unix / (double)24;
-    d_hour -= (int)d_hour;
-    return (int)NormalizeDouble(d_hour * 24,5);
-  } 
+    int server_day, server_hour, gmt_day, gmt_hour, difference;
+    int server_time = (int)TimeCurrent();
+    int gmt_time = (int)TimeGMT();
 
-  void EqualsUnix(const int rates_total, const int prev_calculated, const datetime &time[]){
+    CalculateUnix(server_day, server_hour, server_time);
+    CalculateUnix(gmt_day, gmt_hour, gmt_time);
+
+    if (server_day == gmt_day)
+    {
+      difference = server_hour - gmt_hour;
+      func = Equlas;
+    }
+    else if (server_day > gmt_day)
+    {
+      difference = (server_hour + 24) - gmt_hour;
+      func = Plus;
+    }
+    else
+    {
+      difference = (gmt_hour + 24) - server_hour;
+      func = Minus;
+    }
+    time_difference =  difference;
+  }
+
+  double UnixToHour(double &unix)
+  {
+    unix /= (double)(60 * 60 * 24);
+    unix -= (int)unix;
+    return (int)NormalizeDouble(unix * 24, 5);
+  }
+
+  void EqualsUnix(const int rates_total, const int prev_calculated, const datetime &time[])
+  {
     int index = MathMax(rates_total - prev_calculated, 1);
     int dayi = 0;
     double ilow, ihigh, iclose;
@@ -144,21 +196,36 @@ public:
     }
   }
 
-  void PlusUnix(const int rates_total, const int prev_calculated, const datetime &time[]){
+  void PlusUnix(const int rates_total, const int prev_calculated, const datetime &time[])
+  {
     int index = MathMax(rates_total - prev_calculated, 1);
     int dayi = 0;
-    int hit_time = 24-IsGMT;
+    int h = time_difference/4;
+    int hit_time =  (_Period < 240) ? time_difference : h*4;
     double ilow, ihigh, iclose;
     for (int i = 0; i < index; i++)
     {
+      double unix = (int)time[i];
+      if(UnixToHour(unix) == hit_time){
+
+      }
       dayi = iBarShift(NULL, PERIOD_H1, time[i], false);
-      
     }
   }
 
-  void MinusUnix(){
-
+  void MinusUnix(const int rates_total, const int prev_calculated, const datetime &time[])
+  {
   }
-  
+
+private:
+  void CalculateUnix(int &day, int &hour, const int unix)
+  {
+    double cal_hour = (double)unix / (double)(60 * 60 * 24);
+    double cal_year = (double)cal_hour / (double)365;
+
+    day = (int)cal_hour;
+
+    cal_hour -= day;
+    hour = (int)NormalizeDouble(cal_hour * 24, 5);
+  }
 };
-Pivot pivot;

@@ -30,6 +30,7 @@ int count_cci_1 = 3;
 //+------------------------------------------------------------------+
 int OnInit()
 {
+  
   Print("TimeGMT() : ",TimeGMT());
   Print("TimeCurrnet() : ",TimeCurrent());
   Print("TimeLocal() : ",TimeLocal());
@@ -51,7 +52,7 @@ int OnInit()
   // int day_hour = 24;
   // int BB_period = _Period > 60 ? day_hour/(_Period/hour) : (hour/_Period)*day_hour;
   // Print(BB_period);
-  // stochasticBreak = new StochasticBreak(time);
+  stochasticBreak = new StochasticBreak(time);
   // double array[7] = {1.2, 1.4, 1.5, 2.0, 5.3, 6.2, 6.9};
   // int left = 0; 
   // int right = ArraySize(array) - 1;
@@ -72,7 +73,7 @@ int OnInit()
   hashMap.TryGetValue(0,values);
 
   Print("keysss : ",values);
-
+  stochasticBreak.FunctionPoint();
   return (INIT_SUCCEEDED);
 }
 
@@ -83,9 +84,11 @@ int OnInit()
 void OnTick()
 {
   if (time != Time[0])
-  { 
-    //stochasticBreak.MaxMinCalculate();
-    // Print(iStochastic(NULL,0,5,3,3,MODE_SMA,0,0,1));
+  {
+    int hour;
+    double unix = (double)Time[0];
+    hour = stochasticBreak.UnixToHour(unix);
+    Print("hour : ",hour);
     time = Time[0];
   }
 }
@@ -102,17 +105,45 @@ void OnDeinit(const int reason)
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
+
+class StochasticBreak;
+StochasticBreak *stochasticBreak;
+typedef int (*TFunction)(StochasticBreak*,int);
+
+int TestFunction(StochasticBreak* ptr,int a){return ptr.TestOn(a);}
+
 class StochasticBreak
 {
 private:
   datetime time;
 
 public:
+
   StochasticBreak(datetime time)
   {
     this.time = time;
   }
   ~StochasticBreak() {}
+
+
+  void FunctionPoint()
+  {
+    TFunction tfunc = TestFunction;
+    tfunc(stochasticBreak,3);
+  }
+
+  int TestOn(int a)
+  {
+    Print("ok");
+    return 3;
+  }
+
+   double UnixToHour(double &unix){
+    unix /= (double)(60*60*24);
+    Print(unix);
+    unix -= (int)unix;
+    return (int)NormalizeDouble(unix*24, 5);
+  }
 
   void MaxMinCalculate()
   {
@@ -153,6 +184,17 @@ public:
     }else{
       BinarySearch(datas, value, left, mid-1, value2, value3);
     }
+  }
+
+  void CalculateUnix(int &day, int &hour, const int unix)
+  {
+    double cal_hour = (double)unix / (double)(60 * 60 * 24);
+    double cal_year = (double)cal_hour / (double)365;
+    
+    day = (int)cal_hour;
+    
+    cal_hour -= day;
+    hour = (int)NormalizeDouble(cal_hour*24, 5);
   }
 
 private:
@@ -211,5 +253,4 @@ private:
   }
 
 };
-StochasticBreak *stochasticBreak;
 //+------------------------------------------------------------------+
