@@ -85,10 +85,12 @@ void OnTick()
 {
   if (time != Time[0])
   {
-    int hour;
-    double unix = (double)Time[0];
-    hour = stochasticBreak.UnixToHour(unix);
-    Print("hour : ",hour);
+    int differnce = (int)Time[0]-(int)Time[1];
+    if(differnce != 3600){
+      if(differnce != 176400){
+        Print(differnce);
+      }
+    }
     time = Time[0];
   }
 }
@@ -99,6 +101,15 @@ void OnDeinit(const int reason)
   {
     delete stochasticBreak;
     stochasticBreak = NULL;
+  }
+}
+
+void HoliDay(const int prev_hour, const int current_hour, const int time_difference){
+  int hour_differnce = current_hour - prev_hour;
+  if(hour_differnce != 1){
+    if(hour_differnce != -23){
+      
+    }
   }
 }
 
