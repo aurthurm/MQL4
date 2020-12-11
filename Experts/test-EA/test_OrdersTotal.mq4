@@ -30,12 +30,12 @@ int count_cci_1 = 3;
 //+------------------------------------------------------------------+
 int OnInit()
 {
-  
+
+
   Print("TimeGMT() : ",TimeGMT());
   Print("TimeCurrnet() : ",TimeCurrent());
   Print("TimeLocal() : ",TimeLocal());
   Print((int)(TimeGMT()));
-
 
   double gmt = (int)TimeGMT();
   int server_time = (int)TimeCurrent();
@@ -76,6 +76,7 @@ int OnInit()
   stochasticBreak.FunctionPoint();
   return (INIT_SUCCEEDED);
 }
+
 
 //+------------------------------------------------------------------+
 //|                                                                  |

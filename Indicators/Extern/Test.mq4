@@ -14,8 +14,9 @@
 //+------------------------------------------------------------------+
 //| Custom indicator initialization function                         |
 //+------------------------------------------------------------------+
-datetime date1 = D'2010.12.24 00:00:00';
-datetime date2 = D'2020.12.31 00:00:00';
+datetime date1 = D'2020.11.16 01:00:00';
+datetime date2 = D'2020.11.18 04:00:00';
+bool is_file;
 int OnInit()
 {
   //--- indicator buffers mapping
@@ -38,38 +39,95 @@ int OnCalculate(const int rates_total,
                 const int &spread[])
 {
   //---
+  
   int index = MathMax(rates_total - prev_calculated, 1);
   double unix;
   int time_differnce = 2;
   int current_hour = -1;
-  for (int i = 0; i < index; i++)
+
+  CQueue<double> highs;
+  CQueue<double> lows;
+  CQueue<double> closes;
+  CQueue<int> indexs;
+
+  double d_high = 0;
+  double d_low = 0x7fffffff;
+  double d_close = close[0];
+
+  string texts;
+
+  for (int i = 0; i < index-1; i++)
   {
     if (date1 <= time[i] && date2 >= time[i])
     {
+      texts += time[i] + " : " + DoubleToStr(high[i], _Digits) +"["+i+"] : "+ DoubleToStr(low[i], _Digits) + " , " + DoubleToStr(close[i], _Digits) + "\n";
       unix = (double)time[i];
       int prev_hour = UnixToHour(unix);
       if (prev_hour == time_differnce)
       {
-        //Print("continue : ", time[i]);
+        d_high = (d_high > high[i]) ? d_high : high[i];
+        d_low = (d_low < low[i]) ? d_low : low[i]; 
+        highs.Add(d_high);
+        lows.Add(d_low);
+        closes.Add(d_close);
+        indexs.Add(i+1);
+        d_high = high[i+1];
+        d_low = low[i+1];
+        d_close = close[i+1];
+        current_hour = prev_hour;
+        continue;
       }
       else if (current_hour != -1 && HoliDay(current_hour, prev_hour, time_differnce))
       {
         int differnce = (int)time[i - 1] - (int)time[i];
         if (differnce < 1440)
         {
-          if(prev_hour >= time_differnce && time_differnce <= current_hour){
+          if (prev_hour >= time_differnce && time_differnce <= current_hour)
+          {
+            highs.Add(d_high);
+            lows.Add(d_low);
+            closes.Add(d_close);
+            d_high = high[i];
+            d_low = low[i];
+            d_close = close[i];
+            current_hour = prev_hour;
+            continue;
           }
-            Print("0 : ", time[i]);
         }
         else
         {
-          Print("2~ : ", time[i]);
+          highs.Add(d_high);
+          lows.Add(d_low);
+          closes.Add(d_close);
+          d_high = high[i];
+          d_low = low[i];
+          d_close = close[i];
+          current_hour = prev_hour;
+          continue;
         }
       }
+      d_high = (d_high > high[i]) ? d_high : high[i];
+      d_low = (d_low < low[i]) ? d_low : low[i]; 
       current_hour = prev_hour;
     }
   }
+  texts += "==============================================================\n";
+  while (closes.Count())
+  {
+    texts += indexs.Dequeue()+","+highs.Dequeue() + " , " + lows.Dequeue() + " , " + closes.Dequeue() + "\n";
+  }
 
+  if (!is_file)
+  {
+    int filehandle = FileOpen("test.txt", FILE_WRITE | FILE_TXT);
+    if (filehandle == INVALID_HANDLE)
+    {
+      Alert("failed to open file. error=", GetLastError());
+    }
+    FileWriteString(filehandle, texts + "\r\n");
+    FileClose(filehandle);
+  }
+  is_file = true;
   //--- return value of prev_calculated for next call
   return (rates_total);
 }
