@@ -27,19 +27,36 @@ class Pivot;
 Pivot *pivot;
 
 //============================= Class Function Pointer =============================================
-typedef void (*TFunction)(Pivot *, const int, const int, const datetime &time[]);
+typedef void (*TFunction)(Pivot *, const int, const int, const datetime &time[],
+            const double &high[],
+            const double &low[]);
 
-void Equlas(Pivot *ptr, const int rates_total, const int prev_calculated, const datetime &time[])
+void Equlas(Pivot *ptr,
+            const int rates_total,
+            const int prev_calculated,
+            const datetime &time[],
+            const double &high[],
+            const double &low[])
 {
-  ptr.EqualsUnix(rates_total, prev_calculated, time);
+  ptr.EqualsUnix(rates_total, prev_calculated, time, high, low);
 }
-void Plus(Pivot *ptr, const int rates_total, const int prev_calculated, const datetime &time[])
+void Plus(Pivot *ptr,
+          const int rates_total,
+          const int prev_calculated,
+          const datetime &time[],
+          const double &high[],
+          const double &low[])
 {
-  ptr.PlusUnix(rates_total, prev_calculated, time);
+  ptr.PlusUnix(rates_total, prev_calculated, time, high, low);
 }
-void Minus(Pivot *ptr, const int rates_total, const int prev_calculated, const datetime &time[])
+void Minus(Pivot *ptr,
+           const int rates_total,
+           const int prev_calculated,
+           const datetime &time[],
+           const double &high[],
+           const double &low[])
 {
-  ptr.MinusUnix(rates_total, prev_calculated, time);
+  ptr.MinusUnix(rates_total, prev_calculated, time, high, low);
 }
 TFunction func;
 //===================================================================================================
@@ -105,9 +122,10 @@ int OnCalculate(const int rates_total,
 {
   if (prev_calculated == 0)
   {
-    pivot.UnixToClock();
+    pivot.UnixToClock(rates_total);
+    return (rates_total);
   }
-  func(pivot, rates_total, prev_calculated, time);
+  func(pivot, rates_total, prev_calculated, time, high, low);
   return (rates_total);
 }
 
@@ -128,15 +146,18 @@ private:
   double ihigh;
   double iclose;
   int time_difference;
+  int main_time;
 
 public:
   Pivot(){}
   ~Pivot(){}
 
-  void UnixToClock()
+  void UnixToClock(const int rates_total)
   {
     int value = (int)TimeCurrent() - (int)TimeGMT() + 120;
     time_difference = value / 3600;
+    time_difference -= 2;
+
     if (time_difference == 0)
     {
       func = Equlas;
@@ -144,54 +165,73 @@ public:
     else if (time_difference > 0)
     {
       func = Plus;
-      InitializeData();
     }
     else
     {
+      time_difference = 24 + time_difference;
       func = Minus;
-      InitializeData();
     }
+      InitializeData(rates_total);
     
   }
 
-  int UnixToHour(double &unix)
-  {
-    unix /= (double)(60 * 60 * 24);
-    unix -= (int)unix;
-    return (int)NormalizeDouble(unix * 24, 5);
-  }
-
-  void EqualsUnix(const int rates_total, const int prev_calculated, const datetime &time[])
+  void EqualsUnix(const int rates_total, 
+  const int prev_calculated, 
+  const datetime &time[], 
+  const double &high[], 
+  const double &low[])
   {
     int index = MathMax(rates_total - prev_calculated, 1);
     int dayi = 0;
-    double ilow, ihigh, iclose;
+    double value1 = 60*60*24;
+    int value2 = 24;
+
     for (int i = 0; i < index; i++)
     {
-      dayi = iBarShift(NULL, PERIOD_D1, time[i], false);
-      ilow = iLow(Symbol(), PERIOD_D1, dayi + 1);
-      ihigh = iHigh(Symbol(), PERIOD_D1, dayi + 1);
-      iclose = iClose(Symbol(), PERIOD_D1, dayi + 1);
-      PivotPoint[i] = (ilow + ihigh + iclose) / 3;
-      SupportLine1Buffers[i] = (PivotPoint[i] * 2) - ihigh;
-      SupportLine2Buffers[i] = PivotPoint[i] - (ihigh - ilow);
-      Resistance1Buffers[i] = (PivotPoint[i] * 2) - ilow;
-      Resistance2Buffers[i] = PivotPoint[i] + (ihigh - ilow);
-      Resistance3Buffers[i] = (2 * PivotPoint[i]) + (ihigh - (2 * ilow));
-      SupportLine3Buffers[i] = (2 * PivotPoint[i]) - ((2 * ihigh) - ilow);
+       double unix = (double)time[index];
+       if(time[index] >= main_time &&  UnixToTime(unix,value1, value2) >= time_difference){
+         dayi = iBarShift(NULL, PERIOD_H1, time[index], false);
+         iclose = iClose(NULL, PERIOD_H1, i-1);
+         PivotPoint[i] = (ilow + ihigh + iclose) / 3;
+         SupportLine1Buffers[i] = (PivotPoint[i] * 2) - ihigh;
+         SupportLine2Buffers[i] = PivotPoint[i] - (ihigh - ilow);
+         Resistance1Buffers[i] = (PivotPoint[i] * 2) - ilow;
+         Resistance2Buffers[i] = PivotPoint[i] + (ihigh - ilow);
+         Resistance3Buffers[i] = (2 * PivotPoint[i]) + (ihigh - (2 * ilow));
+         SupportLine3Buffers[i] = (2 * PivotPoint[i]) - ((2 * ihigh) - ilow);
+         ihigh = high[0];
+         ilow = low[0];
+         main_time += (60 * 60);
+      }
+      ihigh = (ihigh > high[index]) ? ihigh : high[index];
+      ilow = (ilow < low[index]) ? ilow : low[index];
     }
+    // PivotPoint[i] = (ilow + ihigh + iclose) / 3;
+    // SupportLine1Buffers[i] = (PivotPoint[i] * 2) - ihigh;
+    // SupportLine2Buffers[i] = PivotPoint[i] - (ihigh - ilow);
+    // Resistance1Buffers[i] = (PivotPoint[i] * 2) - ilow;
+    // Resistance2Buffers[i] = PivotPoint[i] + (ihigh - ilow);
+    // Resistance3Buffers[i] = (2 * PivotPoint[i]) + (ihigh - (2 * ilow));
+    // SupportLine3Buffers[i] = (2 * PivotPoint[i]) - ((2 * ihigh) - ilow);
   }
 
-  void PlusUnix(const int rates_total, const int prev_calculated, const datetime &time[])
+  void PlusUnix(const int rates_total,
+                const int prev_calculated,
+                const datetime &time[],
+                const double &high[],
+                const double &low[])
   {
     int index = MathMax(rates_total - prev_calculated, 1);
     int dayi = 0;
     int h = time_difference / 4;
     int hit_time = (_Period < 240) ? time_difference : h * 4;
-    Print(time[0]);
   }
 
-  void MinusUnix(const int rates_total, const int prev_calculated, const datetime &time[])
+  void MinusUnix(const int rates_total,
+                 const int prev_calculated,
+                 const datetime &time[],
+                 const double &high[],
+                 const double &low[])
   {
   }
 
@@ -207,7 +247,7 @@ private:
     hour = (int)NormalizeDouble(cal_hour * 24, 5);
   }
 
-  void InitializeData()
+  void InitializeData(int const rates_total)
   {
     CQueue<double> highs;
     CQueue<double> lows;
@@ -215,16 +255,18 @@ private:
     CQueue<int> indexs;
 
     int bars = iBars(NULL, PERIOD_H1);
+    Print(bars);
     double unix;
     int current_hour = -1;
     double d_high = iHigh(NULL, PERIOD_H1, 0);
     double d_low = iLow(NULL, PERIOD_H1, 0);
     double d_close = iClose(NULL, PERIOD_H1, 0);
-
+    double value1 = 60*60*24;
+    int value2 = 24;
     for (int i = 0; i < bars - 1; i++)
     {
       unix = (double)iTime(NULL, PERIOD_H1, i);
-      int prev_hour = UnixToHour(unix);
+      int prev_hour = UnixToTime(unix,value1, value2);
       if (prev_hour == time_difference)
       {
         d_high = (d_high > iHigh(NULL, PERIOD_H1, i)) ? d_high : iHigh(NULL, PERIOD_H1, i);
@@ -274,8 +316,7 @@ private:
       d_low = (d_low < iLow(NULL, PERIOD_H1, i)) ? d_low : iLow(NULL, PERIOD_H1, i);
       current_hour = prev_hour;
     }
-    Print(iBars(NULL, 0));
-    CalculatePivot(highs, lows, closes, indexs);
+    CalculatePivot(highs, lows, closes, indexs, rates_total);
   }
 
   bool NoisyDay(const int current_hour, const int prev_hour)
@@ -292,8 +333,16 @@ private:
     return false;
   }
 
-  void CalculatePivot(CQueue<double> &highs, CQueue<double> &lows, CQueue<double> &closes, CQueue<int> &indexs)
+  int UnixToTime(double &unix, double value1, int value2)
   {
+    unix /= value1;
+    unix -= (int)unix;
+    return (int)NormalizeDouble(unix * value2, 5);
+  }
+
+  void CalculatePivot(CQueue<double> &highs, CQueue<double> &lows, CQueue<double> &closes, CQueue<int> &indexs, int const rates_total)
+  {
+
     iclose = closes.Dequeue();
     ihigh = highs.Dequeue();
     ilow = lows.Dequeue();
@@ -306,10 +355,20 @@ private:
     double d_high = highs.Dequeue();
     double d_low = lows.Dequeue();
     int index = indexs.Dequeue();
-   
-    for (int i = 0; i < iBars(NULL, 0); i++)
+
+
+    int prev_dayi = iBarShift(NULL, PERIOD_H1, iTime(NULL, 0, 0), false);
+    main_time = (int)iTime(NULL,PERIOD_H1, 0)+(60*60);
+
+    for (int i = 0; i < rates_total; i++)
     {
-      dayi = iBarShift(NULL, PERIOD_D1, iTime(NULL, 0, i), false);
+      dayi = iBarShift(NULL, PERIOD_H1, iTime(NULL, 0, i), false);
+      if(dayi-prev_dayi == 1 && prev_dayi == index){
+         d_close = closes.Dequeue();
+         d_high = highs.Dequeue();
+         d_low = lows.Dequeue();
+         index = indexs.Dequeue();
+      }
       PivotPoint[i] = (d_low + d_high + d_close) / 3;
       SupportLine1Buffers[i] = (PivotPoint[i] * 2) - d_high;
       SupportLine2Buffers[i] = PivotPoint[i] - (d_high - d_low);
@@ -317,13 +376,19 @@ private:
       Resistance2Buffers[i] = PivotPoint[i] + (d_high - d_low);
       Resistance3Buffers[i] = (2 * PivotPoint[i]) + (d_high - (2 * d_low));
       SupportLine3Buffers[i] = (2 * PivotPoint[i]) - ((2 * d_high) - d_low);
-      if (i == index)
-      {
-        d_close = closes.Dequeue();
-        d_high = highs.Dequeue();
-        d_low = lows.Dequeue();
-        index = indexs.Dequeue();
-      }
+      prev_dayi = dayi;
+      // if (dayi == index)
+      // {
+      //   double unix = (double)iTime(NULL, 0, i);
+      //   int min = UnixToTime(unix, 60*60, 60);
+      //   if (min == 0)
+      //   {
+      //     d_close = closes.Dequeue();
+      //     d_high = highs.Dequeue();
+      //     d_low = lows.Dequeue();
+      //     index = indexs.Dequeue();
+      //   }
+      // }
       // ilow = iLow(Symbol(), PERIOD_D1, dayi + 1);
       // ihigh = iHigh(Symbol(), PERIOD_D1, dayi + 1);
       // iclose = iClose(Symbol(), PERIOD_D1, dayi + 1);

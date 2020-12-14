@@ -14,8 +14,8 @@
 //+------------------------------------------------------------------+
 //| Custom indicator initialization function                         |
 //+------------------------------------------------------------------+
-datetime date1 = D'2020.11.16 01:00:00';
-datetime date2 = D'2020.11.18 04:00:00';
+datetime date1 = D'2019.12.24 01:00:00';
+datetime date2 = D'2019.12.26 06:00:00';
 bool is_file;
 int OnInit()
 {
@@ -55,12 +55,13 @@ int OnCalculate(const int rates_total,
   double d_close = close[0];
 
   string texts;
+  Print(date1+(60*60));
 
   for (int i = 0; i < index-1; i++)
   {
     if (date1 <= time[i] && date2 >= time[i])
     {
-      texts += time[i] + " : " + DoubleToStr(high[i], _Digits) +"["+i+"] : "+ DoubleToStr(low[i], _Digits) + " , " + DoubleToStr(close[i], _Digits) + "\n";
+      texts += time[i] + " : " + DoubleToStr(high[i], _Digits) +" , "+ DoubleToStr(low[i], _Digits) + " , " + DoubleToStr(close[i], _Digits) + "\n";
       unix = (double)time[i];
       int prev_hour = UnixToHour(unix);
       if (prev_hour == time_differnce)
@@ -112,9 +113,15 @@ int OnCalculate(const int rates_total,
     }
   }
   texts += "==============================================================\n";
+  double high1,low1,close1;
   while (closes.Count())
   {
-    texts += indexs.Dequeue()+","+highs.Dequeue() + " , " + lows.Dequeue() + " , " + closes.Dequeue() + "\n";
+    high1 = highs.Dequeue();
+    low1 = lows.Dequeue();
+    close1 = closes.Dequeue();
+    texts += high1+" , "+low1+ " , "+close1+ "\n";
+    double pp = (high1+low1+close1)/3;
+    texts += NormalizeDouble(pp, _Digits)+ "\n";
   }
 
   if (!is_file)

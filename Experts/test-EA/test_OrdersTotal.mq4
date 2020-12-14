@@ -30,50 +30,6 @@ int count_cci_1 = 3;
 //+------------------------------------------------------------------+
 int OnInit()
 {
-
-
-  Print("TimeGMT() : ",TimeGMT());
-  Print("TimeCurrnet() : ",TimeCurrent());
-  Print("TimeLocal() : ",TimeLocal());
-  Print((int)(TimeGMT()));
-
-  double gmt = (int)TimeGMT();
-  int server_time = (int)TimeCurrent();
-
-  gmt /= (60*60);
-
-  double davalue = (double)gmt/(double)24;
-  davalue -= (int)davalue;
-  Print(davalue*24);
-
-  
-  // Print(_Period);
-  // int hour = 60;
-  // int day_hour = 24;
-  // int BB_period = _Period > 60 ? day_hour/(_Period/hour) : (hour/_Period)*day_hour;
-  // Print(BB_period);
-  stochasticBreak = new StochasticBreak(time);
-  // double array[7] = {1.2, 1.4, 1.5, 2.0, 5.3, 6.2, 6.9};
-  // int left = 0; 
-  // int right = ArraySize(array) - 1;
-  // double value = 1.3;
-  // double profit,stoploss;
-  // stochasticBreak.BinarySearch(array, value, left, right, profit, stoploss);
-
-  CHashMap<int, datetime> hashMap;
-
-  hashMap.Add(0,Time[0]);
-  hashMap.Remove(0);
-
-  int key[];
-  string value[];
-
-  datetime values;
-
-  hashMap.TryGetValue(0,values);
-
-  Print("keysss : ",values);
-  stochasticBreak.FunctionPoint();
   return (INIT_SUCCEEDED);
 }
 
@@ -84,16 +40,7 @@ int OnInit()
 #define MACRO
 void OnTick()
 {
-  if (time != Time[0])
-  {
-    int differnce = (int)Time[0]-(int)Time[1];
-    if(differnce != 3600){
-      if(differnce != 176400){
-        Print(differnce);
-      }
-    }
-    time = Time[0];
-  }
+  iCustom(NULL, 0, "Extern/CFTPivotalPoint.ex4", 6, 0);
 }
 
 void OnDeinit(const int reason)
